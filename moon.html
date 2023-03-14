@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Moonlander Game</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: black;
+        }
+    </style>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+</head>
+
+<body>
+    <canvas id="game-canvas"></canvas>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 1200,
+            height: 900,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 1.68 }, // 重力を設定
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.image('background', 'assets/background.png');
+            this.load.image('spaceship', 'assets/spaceship.png');
+            this.load.image('flag', 'assets/flag.png');
+        }
+
+        function create() {
+            this.add.image(0, 0, 'background').setOrigin(0, 0);
+
+            // 着陸エリアのスプライトを作成
+            this.moon = this.add.sprite(Phaser.Math.Between(200, this.game.config.width - 200), this.game.config.height - 100, 'flag');
+            this.physics.add.existing(this.moon, true); // 静的な物体に設定
+            this.moon.body.allowGravity = false;
+            this.moon.displayWidth = 60;
+            this.moon.displayHeight = 100;
+            this.moon.body.setSize(80, 10);
+
+
+            this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship'); // Y座標を修正
+            this.spaceship.setCollideWorldBounds(true); // 画面外に出ないように設定
+            this.spaceship.setDrag(10); // 慣性の設定
+            this.spaceship.setAngularDrag(1500); // 慣性の設定
+            this.spaceship.setMaxVelocity(1500); // 最大速度の設定
+            this.spaceship.setGravityY(400);
+            this.cursors = this.input.keyboard.createCursorKeys();
+        }
+
+        function update() {
+            if (this.cursors.up.isDown) {
+                this.spaceship.setAccelerationY(-500);
+            } else if (this.cursors.down.isDown) {
+                this.spaceship.setAccelerationY(500);
+            } else {
+                this.spaceship.setAccelerationY(0);
+            }
+            if (this.cursors.left.isDown) {
+                this.spaceship.setAccelerationX(-500);
+            } else if (this.cursors.right.isDown) {
+                this.spaceship.setAccelerationX(500);
+            } else {
+                this.spaceship.setAccelerationX(0);
+            }
+
+            // 着陸エリアに接触した時にクリア
+            if (this.physics.overlap(this.spaceship, this.moon)) {
+                this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
+                this.spaceship.setVelocityX(0); // X軸方向の速度を0にする
+                this.spaceship.setVelocityY(0); // Y軸方向の速度を0にする
+                this.spaceship.setAccelerationX(0); // X軸方向の加速度を0にする
+                this.spaceship.setAccelerationY(0); // Y軸方向の加速度を0にする
+                this.spaceship.setGravityY(0); // Y軸方向の重力を0にする
+            }
+        }
+        
+
+    </script>
+</body>
+
+</html>
