@@ -48,6 +48,7 @@
             this.load.image('background', 'assets/background.png');
             this.load.image('spaceship', 'assets/spaceship.png');
             this.load.image('flag', 'assets/flag.png');
+            this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
         }
 
         function create() {
@@ -69,6 +70,15 @@
             this.spaceship.setMaxVelocity(1500); // 最大速度の設定
             this.spaceship.setGravityY(100);
             this.cursors = this.input.keyboard.createCursorKeys();
+
+            // 爆発アニメーションの作成
+            this.anims.create({
+                key: 'explode',
+                frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 64 }),
+                frameRate: 24,
+                repeat: 0,
+                hideOnComplete: true
+            });
         }
 
         function update() {
@@ -97,19 +107,29 @@
                 this.spaceship.setGravityY(0); // Y軸方向の重力を0にする
             }
 
-             // 宇宙船が画面下に達したかどうかを確認
+            // 宇宙船が画面下に達したかどうかを確認
             if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height) {
                 gameOver(this, 'Mission Failed');
             }
         }
 
         function gameOver(scene, message) {
-            // ゲームオーバーメッセージを表示
-            scene.add.text(400, 300, message, { fontSize: '32px', fill: '#FFF' });
+            // 爆発アニメーションを作成して再生
+            const explosion = scene.add.sprite(scene.spaceship.x, scene.spaceship.y, 'explosion');
+            explosion.play('explode');
+
             // 宇宙船を非表示にする
             scene.spaceship.setVisible(false);
-            // ゲームのアップデートを停止する
-            scene.scene.pause();
+
+            // ゲームオーバーメッセージを2秒遅らせて表示する
+            setTimeout(() => {
+                scene.add.text(400, 300, message, { fontSize: '32px', fill: '#FFF' });
+            }, 2000); // 2000ミリ秒（2秒）後に実行
+
+            // ゲームのアップデートを爆発アニメーションが終了してから停止する
+            setTimeout(() => {
+                scene.scene.pause();
+            }, 3000); // 3000ミリ秒（3秒）後に実行
         }
 
     </script>
