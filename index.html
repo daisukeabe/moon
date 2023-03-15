@@ -31,7 +31,7 @@
             physics: {
                 default: 'arcade',
                 arcade: {
-                    gravity: { y: 1.68 }, // 重力を設定
+                    gravity: { y: 100 }, // 重力を強く設定
                     debug: false
                 }
             },
@@ -59,7 +59,7 @@
             this.moon.body.allowGravity = false;
             this.moon.displayWidth = 60;
             this.moon.displayHeight = 100;
-            this.moon.body.setSize(80, 10);
+            this.moon.body.setSize(30, 5);
 
 
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship'); // Y座標を修正
@@ -96,8 +96,21 @@
                 this.spaceship.setAccelerationY(0); // Y軸方向の加速度を0にする
                 this.spaceship.setGravityY(0); // Y軸方向の重力を0にする
             }
+
+             // 宇宙船が画面下に達したかどうかを確認
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height) {
+                gameOver(this, 'Mission Failed');
+            }
         }
-        
+
+        function gameOver(scene, message) {
+            // ゲームオーバーメッセージを表示
+            scene.add.text(400, 300, message, { fontSize: '32px', fill: '#FFF' });
+            // 宇宙船を非表示にする
+            scene.spaceship.setVisible(false);
+            // ゲームのアップデートを停止する
+            scene.scene.pause();
+        }
 
     </script>
 </body>
