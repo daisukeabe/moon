@@ -74,8 +74,8 @@
             // 爆発アニメーションの作成
             this.anims.create({
                 key: 'explode',
-                frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 64 }),
-                frameRate: 24,
+                frames: this.anims.generateFrameNumbers('explosion', { start: 20, end: 50 }),
+                frameRate: 30,
                 repeat: 0,
                 hideOnComplete: true
             });
@@ -114,6 +114,13 @@
         }
 
         function gameOver(scene, message) {
+            // 宇宙船の速度と加速度を0に設定
+            scene.spaceship.setVelocityX(0);
+            scene.spaceship.setVelocityY(0);
+            scene.spaceship.setAccelerationX(0);
+            scene.spaceship.setAccelerationY(0);
+            scene.spaceship.setGravityY(0);
+
             // 爆発アニメーションを作成して再生
             const explosion = scene.add.sprite(scene.spaceship.x, scene.spaceship.y, 'explosion');
             explosion.play('explode');
@@ -129,7 +136,7 @@
             // ゲームのアップデートを爆発アニメーションが終了してから停止する
             setTimeout(() => {
                 scene.scene.pause();
-            }, 3000); // 3000ミリ秒（3秒）後に実行
+            }, 2000); // 3000ミリ秒（3秒）後に実行
         }
 
     </script>
