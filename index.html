@@ -62,8 +62,11 @@
                     }
                 });
                 scene.startSound.play(); // ゲームが開始されたら音声を再生
+                scene.titleSound.play(); // ゲームが開始されたら音声を再生
             });
         }
+
+
 
         function restartGame(scene) {
             gameStarted = false;
@@ -110,14 +113,14 @@
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
 
-            this.titleSound = this.sound.add('title', { loop: false, volume: 0.7 });
+            this.titleSound = this.sound.add('title', { loop: false, volume: 0.5 });
 
-            this.startSound = this.sound.add('start', { loop: true, volume: 0.5 });
+            this.startSound = this.sound.add('start', { loop: true, volume: 0.1 });
 
-            this.goalSound = this.sound.add('goal', { loop: false, volume: 0.6 });
+            this.goalSound = this.sound.add('goal', { loop: false, volume: 0.3 });
             this.goalTimer = 0;
 
-            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 0.6 });
+            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 0.5 });
 
             // 爆発アニメーションの作成
             this.anims.create({
@@ -145,7 +148,6 @@
                 this.spaceship.setAcceleration(0);
                 return;
             }
-
 
             if (this.cursors.up.isDown) {
                 this.spaceship.setAccelerationY(-500);
@@ -180,6 +182,15 @@
                     this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
 
                     setTimeout(() => {
+                        resetGame(scene);
+                    }, 3000);
+
+                    gameStarted = false; // ゲームが開始されていない状態に戻す
+                    setTimeout(() => {
+                        scene.scene.restart();
+                    }, 3000);
+
+                    setTimeout(() => {
                         this.spaceship.setVelocityX(0); // X軸方向の速度を0にする
                         this.spaceship.setVelocityY(0); // Y軸方向の速度を0にする
                         this.spaceship.setAccelerationX(0); // X軸方向の加速度を0にする
@@ -188,17 +199,22 @@
 
                         setTimeout(() => {
                             restartGame(this);
-                        }, 5000);
-                    }, 5000); // 5000ミリ秒（5秒）後に実行
+                        }, 3000);
+                    }, 3000); // 5000ミリ秒（5秒）後に実行
                 }
             } else {
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
             }
 
             // 宇宙船が画面下に達したかどうかを確認
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 30) {
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 32) {
                 gameOver(this, 'Mission Failed');
             }
+        }
+        function resetGame(scene) {
+            scene.scene.restart(); // ゲームシーンをリセット
+            gameStarted = false; // ゲームが開始されていない状態に戻す
+            showTitle(scene); // タイトル画面を再表示
         }
 
         let explosionPlaying = false;
@@ -206,6 +222,7 @@
         function gameOver(scene, message) {
             if (!explosionPlaying) {
                 explosionPlaying = true;
+
                 scene.startSound.stop(); // 爆発時に音声を停止
 
                 // 爆発アニメーションを作成して再生
@@ -226,7 +243,7 @@
                 // ゲームオーバーメッセージを2秒遅らせて表示する
                 setTimeout(() => {
                     scene.add.text(400, 300, message, { fontSize: '32px', fill: '#FFF' });
-                }, 2000); // 2000ミリ秒（2秒）後に実行
+                }, 1000); // 2000ミリ秒（2秒）後に実行
 
                 // ゲームのアップデートを爆発アニメーションが終了してから停止する
                 setTimeout(() => {
@@ -234,13 +251,36 @@
                 }, 2000); // 3000ミリ秒（3秒）後に実行
 
                 setTimeout(() => {
-                    restartGame(scene);
+                    resetGame(scene);
+                }, 3000);
+
+                gameStarted = false; // ゲームが開始されていない状態に戻す
+                setTimeout(() => {
+                    scene.scene.restart();
                 }, 3000);
             }
         }
 
+        function resetGame(scene) {
+            scene.scene.restart(); // ゲームシーンをリセット
+            gameStarted = false; // ゲームが開始されていない状態に戻す
+            showTitle(scene); // タイトル画面を再表示
+        }
+
+
     </script>
 
+
+
+    <!--　追加要素
+    
+    ・燃料を右上に表示、縦型10秒で切れる、赤ゲージ
+    ・スペースデブリ障害物：3個から10個を最小縦横10px、最大縦横40pxサイズをランダムで配置、左右に40px内でランダム方向に動く。ぶつかるとゲームオーバー。
+    ・ブラックホール障害：縦横40pxサイズで強い重力が中心にあり、ぶつかるとゲームオーバー。
+    ・宇宙船が左右に移動する時は移動方向に傾けたい
+    
+    -->
 </body>
+
 
 </html>
