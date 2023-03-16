@@ -44,6 +44,33 @@
 
         const game = new Phaser.Game(config);
 
+
+        let gameStarted = false;
+
+        function showTitle(scene) {
+            const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
+            title.setDisplaySize(800, 500);
+            title.setInteractive();
+
+            title.once('pointerup', () => {
+                gameStarted = true;
+                scene.tweens.add({
+                    targets: title,
+                    alpha: 0,
+                    duration: 500,
+                    onComplete: () => {
+                        title.destroy();
+                    }
+                });
+            });
+        }
+
+        function restartGame(scene) {
+            gameStarted = false;
+            scene.scene.restart();
+        }
+
+
         function preload() {
             this.load.image('background', 'assets/background.png');
             this.load.image('spaceship', 'assets/spaceship.png');
@@ -88,9 +115,19 @@
                     gameObject.destroy();
                 }
             });
+
+            showTitle(this);
+
         }
 
         function update() {
+            if (!gameStarted) {
+                this.spaceship.setVelocity(0);
+                this.spaceship.setAcceleration(0);
+                return;
+            }
+
+
             if (this.cursors.up.isDown) {
                 this.spaceship.setAccelerationY(-500);
             } else if (this.cursors.down.isDown) {
@@ -155,6 +192,10 @@
                 setTimeout(() => {
                     scene.scene.pause();
                 }, 2000); // 3000ミリ秒（3秒）後に実行
+
+                setTimeout(() => {
+                    restartGame(scene);
+                }, 3000);
             }
         }
 
