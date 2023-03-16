@@ -47,26 +47,33 @@
         let gameStarted = false;
 
         function showTitle(scene) {
-            const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
-            title.setDisplaySize(800, 500);
-            title.setInteractive();
+    const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
+    title.setDisplaySize(800, 500);
+    title.setInteractive();
 
-            title.once('pointerup', () => {
-                gameStarted = true;
-                scene.tweens.add({
-                    targets: title,
-                    alpha: 0,
-                    duration: 500,
-                    onComplete: () => {
-                        title.destroy();
-                    }
-                });
-            });
-        }
+    title.once('pointerup', () => {
+        gameStarted = true;
+        scene.tweens.add({
+            targets: title,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => {
+                title.destroy();
+            }
+        });
+        scene.startSound.play(); // ゲームが開始されたら音声を再生
+    });
+}
 
         function restartGame(scene) {
             gameStarted = false;
+            scene.spaceship.setVisible(true); // 再スタート時に宇宙船をリセット
+            scene.spaceship.setPosition(scene.game.config.width / 2, 150); // 宇宙船の位置をリセット
+            scene.spaceship.setVelocity(0); // 宇宙船の速度をリセット
+            scene.spaceship.setAcceleration(0); // 宇宙船の加速度をリセット
+            scene.spaceship.setGravityY(80); // 宇宙船の重力をリセット
             scene.scene.restart();
+            scene.startSound.stop(); // ゲームが再開されたら音声を再生
         }
 
 
@@ -76,7 +83,9 @@
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
+            this.load.audio('start', 'assets/start.wav');
             this.load.audio('goal', 'assets/goal.wav');
+            
         }
 
         function create() {
@@ -93,15 +102,16 @@
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship'); // Y座標を修正
             this.spaceship.setCollideWorldBounds(true); // 画面外に出ないように設定
             this.spaceship.setDrag(0); // 慣性の設定
-            this.spaceship.setAngularDrag(10); // 慣性の設定
+            this.spaceship.setAngularDrag(8); // 慣性の設定
             this.spaceship.setMaxVelocity(100000); // 最大速度の設定
             this.spaceship.setGravityY(80);
             this.spaceship.displayWidth = 50; // 以前の値の半分に変更
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
 
-            this.goalSound = this.sound.add('goal', { loop: false });
+            this.startSound = this.sound.add('start', { loop: true });
 
+            this.goalSound = this.sound.add('goal', { loop: false });
             this.goalTimer = 0;
 
 
@@ -157,32 +167,32 @@
             );
 
             if (Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
-        this.goalTimer += this.game.loop.delta; // タイマーを増加させる
+                this.goalTimer += this.game.loop.delta; // タイマーを増加させる
 
-        if (this.goalTimer >= 800) { // タイマーが3000ミリ秒（3秒）以上になったら
-            this.goalTimer = 0; // タイマーをリセットする
-            this.scene.pause(); // 一時停止
-            this.goalSound.play(); // ゴール時に音を再生
-            this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
+                if (this.goalTimer >= 1000) { // タイマーが1000ミリ秒（1秒）以上になったら
+                    this.goalTimer = 0; // タイマーをリセットする
+                    this.scene.pause(); // 一時停止
+                    this.goalSound.play(); // ゴール時に音を再生
+                    this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
 
-            setTimeout(() => {
-                this.spaceship.setVelocityX(0); // X軸方向の速度を0にする
-                this.spaceship.setVelocityY(0); // Y軸方向の速度を0にする
-                this.spaceship.setAccelerationX(0); // X軸方向の加速度を0にする
-                this.spaceship.setAccelerationY(0); // Y軸方向の加速度を0にする
-                this.spaceship.setGravityY(0); // Y軸方向の重力を0にする
+                    setTimeout(() => {
+                        this.spaceship.setVelocityX(0); // X軸方向の速度を0にする
+                        this.spaceship.setVelocityY(0); // Y軸方向の速度を0にする
+                        this.spaceship.setAccelerationX(0); // X軸方向の加速度を0にする
+                        this.spaceship.setAccelerationY(0); // Y軸方向の加速度を0にする
+                        this.spaceship.setGravityY(0); // Y軸方向の重力を0にする
 
-                setTimeout(() => {
-                    restartGame(this);
-                }, 5000);
-            }, 5000); // 5000ミリ秒（5秒）後に実行
-        }
-    } else {
-        this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
-    }
+                        setTimeout(() => {
+                            restartGame(this);
+                        }, 5000);
+                    }, 5000); // 5000ミリ秒（5秒）後に実行
+                }
+            } else {
+                this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
+            }
 
             // 宇宙船が画面下に達したかどうかを確認
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height) {
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 30) {
                 gameOver(this, 'Mission Failed');
             }
         }
@@ -192,6 +202,7 @@
         function gameOver(scene, message) {
             if (!explosionPlaying) {
                 explosionPlaying = true;
+                scene.startSound.stop(); // 爆発時に音声を停止
 
                 // 爆発アニメーションを作成して再生
                 const explosion = scene.add.sprite(scene.spaceship.x, scene.spaceship.y, 'explosion');
@@ -222,6 +233,7 @@
         }
 
     </script>
+
 </body>
 
 </html>
