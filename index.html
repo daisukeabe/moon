@@ -44,7 +44,6 @@
 
         const game = new Phaser.Game(config);
 
-
         let gameStarted = false;
 
         function showTitle(scene) {
@@ -77,6 +76,7 @@
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
+            this.load.audio('goal', 'assets/goal.wav');
         }
 
         function create() {
@@ -99,6 +99,11 @@
             this.spaceship.displayWidth = 50; // 以前の値の半分に変更
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
+
+            this.goalSound = this.sound.add('goal', { loop: false });
+
+            this.goalTimer = 0;
+
 
             // 爆発アニメーションの作成
             this.anims.create({
@@ -150,14 +155,31 @@
                 this.moon.displayWidth,
                 5
             );
+
             if (Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
-                this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
+        this.goalTimer += this.game.loop.delta; // タイマーを増加させる
+
+        if (this.goalTimer >= 800) { // タイマーが3000ミリ秒（3秒）以上になったら
+            this.goalTimer = 0; // タイマーをリセットする
+            this.scene.pause(); // 一時停止
+            this.goalSound.play(); // ゴール時に音を再生
+            this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
+
+            setTimeout(() => {
                 this.spaceship.setVelocityX(0); // X軸方向の速度を0にする
                 this.spaceship.setVelocityY(0); // Y軸方向の速度を0にする
                 this.spaceship.setAccelerationX(0); // X軸方向の加速度を0にする
                 this.spaceship.setAccelerationY(0); // Y軸方向の加速度を0にする
                 this.spaceship.setGravityY(0); // Y軸方向の重力を0にする
-            }
+
+                setTimeout(() => {
+                    restartGame(this);
+                }, 5000);
+            }, 5000); // 5000ミリ秒（5秒）後に実行
+        }
+    } else {
+        this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
+    }
 
             // 宇宙船が画面下に達したかどうかを確認
             if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height) {
