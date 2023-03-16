@@ -181,14 +181,14 @@
                     this.goalSound.play(); // ゴール時に音を再生
                     this.add.text(400, 300, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' });
 
-                    setTimeout(() => {
-                        resetGame(scene);
-                    }, 3000);
+                    //setTimeout(() => {
+                    //    resetGame(scene);
+                    //}, 3000);
 
-                    gameStarted = false; // ゲームが開始されていない状態に戻す
-                    setTimeout(() => {
-                        scene.scene.restart();
-                    }, 3000);
+                    //gameStarted = false; // ゲームが開始されていない状態に戻す
+                    //setTimeout(() => {
+                    //    scene.scene.restart();
+                    //}, 3000);
 
                     setTimeout(() => {
                         this.spaceship.setVelocityX(0); // X軸方向の速度を0にする
