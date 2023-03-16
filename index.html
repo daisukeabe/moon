@@ -85,7 +85,7 @@
             this.load.image('title', 'assets/title.png');
             this.load.audio('start', 'assets/start.wav');
             this.load.audio('goal', 'assets/goal.wav');
-            
+            this.load.audio('explosion', 'assets/explosion.wav');
         }
 
         function create() {
@@ -109,11 +109,12 @@
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
 
-            this.startSound = this.sound.add('start', { loop: true });
+            this.startSound = this.sound.add('start', { loop: true, volume: 0.5 });
 
-            this.goalSound = this.sound.add('goal', { loop: false });
+            this.goalSound = this.sound.add('goal', { loop: false, volume: 0.6 });
             this.goalTimer = 0;
 
+            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 0.6 });
 
             // 爆発アニメーションの作成
             this.anims.create({
@@ -207,6 +208,9 @@
                 // 爆発アニメーションを作成して再生
                 const explosion = scene.add.sprite(scene.spaceship.x, scene.spaceship.y, 'explosion');
                 explosion.play('explode');
+
+                // 爆発音を再生
+                scene.explosionSound.play();
 
                 // 宇宙船を非表示にする
                 scene.spaceship.setVisible(false);
