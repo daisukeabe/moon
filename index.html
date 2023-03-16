@@ -47,23 +47,23 @@
         let gameStarted = false;
 
         function showTitle(scene) {
-    const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
-    title.setDisplaySize(800, 500);
-    title.setInteractive();
+            const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
+            title.setDisplaySize(800, 500);
+            title.setInteractive();
 
-    title.once('pointerup', () => {
-        gameStarted = true;
-        scene.tweens.add({
-            targets: title,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => {
-                title.destroy();
-            }
-        });
-        scene.startSound.play(); // ゲームが開始されたら音声を再生
-    });
-}
+            title.once('pointerup', () => {
+                gameStarted = true;
+                scene.tweens.add({
+                    targets: title,
+                    alpha: 0,
+                    duration: 500,
+                    onComplete: () => {
+                        title.destroy();
+                    }
+                });
+                scene.startSound.play(); // ゲームが開始されたら音声を再生
+            });
+        }
 
         function restartGame(scene) {
             gameStarted = false;
@@ -83,6 +83,7 @@
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
+            this.load.audio('title', 'assets/title.wav');
             this.load.audio('start', 'assets/start.wav');
             this.load.audio('goal', 'assets/goal.wav');
             this.load.audio('explosion', 'assets/explosion.wav');
@@ -108,6 +109,8 @@
             this.spaceship.displayWidth = 50; // 以前の値の半分に変更
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
+
+            this.titleSound = this.sound.add('title', { loop: false, volume: 0.7 });
 
             this.startSound = this.sound.add('start', { loop: true, volume: 0.5 });
 
