@@ -100,14 +100,14 @@
         function create() {
             this.add.image(0, 0, 'background').setOrigin(0, 0);
 
-            this.fuel = 200; // 燃料の最大値を設定
+            this.fuel = 250; // 燃料の最大値を設定
 
             // 燃料ゲージの枠を作成
     this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
     this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
 
     // 燃料ゲージを作成
-    this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xFF0000 } });
+    this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
     this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
 
 
