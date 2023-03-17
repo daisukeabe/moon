@@ -3,12 +3,14 @@
 
 <head prefix="og:http://ogp.me/ns#">
     <title>Moonlander</title>
-    <meta name="description" content="キーボードの上下左右で移動してフラッグ目指して着陸します。">
+    <meta name="description"
+        content="Phaser 3を使ったMoonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、目標となるフラッグに着陸することが目的です。ゲームには以下の機能があります。">
     <meta charset="utf-8">
     <meta property="og:url" content="https://moon-alpha.vercel.app/" />
     <meta property="og:type" content="product" />
     <meta property="og:title" content="Moonlander" />
-    <meta property="og:description" content="キーボードの上下左右で移動してフラッグ目指して着陸します。" />
+    <meta property="og:description"
+        content="Phaser 3を使ったMoonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、目標となるフラッグに着陸することが目的です。ゲームには以下の機能があります。" />
     <meta property="og:site_name" content="Moonlander" />
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
@@ -76,6 +78,10 @@
             scene.scene.resume(); // ゲームシーンを再開
             scene.startSound.stop();
             scene.scene.restart();
+
+            // 燃料ゲージをリセット
+            scene.fuel = 200; // 燃料を最大値に戻す
+
         }
 
 
@@ -93,6 +99,17 @@
 
         function create() {
             this.add.image(0, 0, 'background').setOrigin(0, 0);
+
+            this.fuel = 200; // 燃料の最大値を設定
+
+            // 燃料ゲージの枠を作成
+    this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
+    this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
+
+    // 燃料ゲージを作成
+    this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xFF0000 } });
+    this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
+
 
             // 着陸エリアのスプライトを作成
             this.moon = this.add.sprite(Phaser.Math.Between(200, this.game.config.width - 200), this.game.config.height - 100, 'flag');
@@ -147,6 +164,24 @@
                 this.spaceship.setAcceleration(0);
                 return;
             }
+
+            // ゲームが開始されていない場合は処理をスキップ
+            if (!gameStarted) {
+                return;
+            }
+
+            // 燃料を消費し、燃料ゲージを更新
+    if (this.input.keyboard.createCursorKeys().up.isDown && this.fuel > 0) {
+        this.fuel -= 1;
+        this.fuelGauge.clear().fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
+    }
+
+            // 燃料がなくなったら操作を無効にする
+            if (this.fuel <= 0) {
+                this.cursors.up.isDown = false;
+            }
+
+
             if (this.cursors.up.isDown) {
                 this.spaceship.setAccelerationY(-500);
             } else if (this.cursors.down.isDown) {
