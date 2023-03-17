@@ -15,10 +15,20 @@
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
     <style>
-        body {
-            margin: 0;
-            background-color: black;
-        }
+        html, body {
+        margin: 0 0 0 -100px;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    canvas {
+        display: block;
+    }
     </style>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
@@ -29,7 +39,7 @@
         const config = {
             type: Phaser.AUTO,
             width: 1200,
-            height: 900,
+            height: 800,
             physics: {
                 default: 'arcade',
                 arcade: {
@@ -45,6 +55,9 @@
         };
 
         const game = new Phaser.Game(config);
+
+let cursors;
+let insideshipSound;
 
         let gameStarted = false;
 
@@ -91,10 +104,11 @@
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
-            this.load.audio('title', 'assets/title.wav');
-            this.load.audio('start', 'assets/start.wav');
-            this.load.audio('goal', 'assets/goal.wav');
-            this.load.audio('explosion', 'assets/explosion.wav');
+            this.load.audio('title', 'assets/title.wav'); // braam音
+            this.load.audio('start', 'assets/start.wav'); // ビープ音
+            this.load.audio('goal', 'assets/goal.wav'); // ランディング音
+            this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
+            this.load.audio('insideship', 'assets/insideship.wav'); // ジェット音
         }
 
         function create() {
@@ -103,12 +117,13 @@
             this.fuel = 250; // 燃料の最大値を設定
 
             // 燃料ゲージの枠を作成
-    this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
-    this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
+            this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
+            this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
+            
 
-    // 燃料ゲージを作成
-    this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
-    this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
+            // 燃料ゲージを作成
+            this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
+            this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
 
 
             // 着陸エリアのスプライトを作成
@@ -129,14 +144,19 @@
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
 
-            this.titleSound = this.sound.add('title', { loop: false, volume: 0.5 });
+            this.titleSound = this.sound.add('title', { loop: false, volume: 0.3 });
 
-            this.startSound = this.sound.add('start', { loop: true, volume: 0.1 });
+            this.startSound = this.sound.add('start', { loop: true, volume: 0.05 });
 
             this.goalSound = this.sound.add('goal', { loop: false, volume: 0.3 });
             this.goalTimer = 0;
 
-            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 0.5 });
+            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 0.4 });
+            
+            insideshipSound = this.sound.add('insideship', { loop: true, volume: 0.8 });
+            cursors = this.input.keyboard.createCursorKeys();
+            
+            
 
             // 爆発アニメーションの作成
             this.anims.create({
@@ -170,15 +190,32 @@
                 return;
             }
 
+// ジェット音の再生タイミング    バグあり　キー押しばまま爆発しても止まらない
+if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
+        if (!insideshipSound.isPlaying) {
+            insideshipSound.play();
+        }
+    } else {
+        if (insideshipSound.isPlaying) {
+            insideshipSound.stop();
+        }
+}
+
             // 燃料を消費し、燃料ゲージを更新
-    if (this.input.keyboard.createCursorKeys().up.isDown && this.fuel > 0) {
-        this.fuel -= 1;
-        this.fuelGauge.clear().fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
-    }
+            if ((this.input.keyboard.createCursorKeys().up.isDown ||
+                this.input.keyboard.createCursorKeys().down.isDown ||
+                this.input.keyboard.createCursorKeys().left.isDown ||
+                this.input.keyboard.createCursorKeys().right.isDown) && this.fuel > 0) {
+                this.fuel -= 1;
+                this.fuelGauge.clear().fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
+            }
 
             // 燃料がなくなったら操作を無効にする
             if (this.fuel <= 0) {
                 this.cursors.up.isDown = false;
+                this.cursors.down.isDown = false;
+                this.cursors.left.isDown = false;
+                this.cursors.right.isDown = false;
             }
 
 
@@ -242,7 +279,7 @@
         function gameOver(scene, message) {
             if (!explosionPlaying) {
                 explosionPlaying = true;
-                scene.startSound.stop(); // 爆発時に音声を停止
+                scene.startSound.stop(); // 爆発時にビープ音を停止
 
                 // 爆発アニメーションを作成して再生
                 const explosion = scene.add.sprite(scene.spaceship.x, scene.spaceship.y, 'explosion');
@@ -277,10 +314,19 @@
                 setTimeout(() => {
                     scene.scene.restart();
                 }, 3000);
+                
             }
         }
 
     </script>
+
+    <!-- 追加要素
+
+        ・スペースデブリ障害物：3個から10個を最小縦横10px、最大縦横40pxサイズをランダムで配置、左右に40px内でランダム方向に動く。ぶつかるとゲームオーバー。
+        ・ブラックホール障害：縦横40pxサイズで強い重力が中心にあり、ぶつかるとゲームオーバー。
+        ・宇宙船が左右に移動する時は移動方向に傾けたい
+
+    -->
 
 </body>
 
