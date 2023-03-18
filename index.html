@@ -91,6 +91,7 @@
             scene.spaceship.setGravityY(80);
             scene.scene.resume(); // ゲームシーンを再開
             scene.startSound.stop();
+  //          scene.jetSound.stop();
             scene.scene.restart();
 
             // 燃料ゲージをリセット
@@ -157,8 +158,6 @@
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
-
-
             // 爆発アニメーションの作成
             this.anims.create({
                 key: 'explode',
@@ -191,7 +190,7 @@
                 return;
             }
 
-            // ジェット音の再生タイミング    バグあり　キー押しばまま爆発しても止まらない
+            // ジェット音の再生タイミング
             if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
                 if (!jetSound.isPlaying) {
                     jetSound.play();
@@ -252,6 +251,11 @@
                     this.goalSound.play(); // ゴール時に音を再生
                     this.add.text(this.game.config.width / 2, this.game.config.height / 2, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5);
 
+                    // ゴール時にjet音を停止
+                    if (jetSound.isPlaying) {
+                        jetSound.stop();
+                    }
+
                     setTimeout(() => {
                         this.spaceship.setVelocityX(0);
                         this.spaceship.setVelocityY(0);
@@ -277,6 +281,11 @@
         let explosionPlaying = false;
 
         function gameOver(scene, message) {
+            // 爆発時にjet音を停止
+            if (jetSound.isPlaying) {
+                jetSound.stop();
+            }
+
             if (!explosionPlaying) {
                 explosionPlaying = true;
                 scene.startSound.stop(); // 爆発時にビープ音を停止
