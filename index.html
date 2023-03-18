@@ -15,20 +15,21 @@
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
     <style>
-        html, body {
-        margin: 0 0 0 -100px;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background-color: black;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    
-    canvas {
-        display: block;
-    }
+        html,
+        body {
+            margin: 0 0 0 -100px;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+        }
     </style>
     <script src="//cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
@@ -56,8 +57,8 @@
 
         const game = new Phaser.Game(config);
 
-let cursors;
-let insideshipSound;
+        let cursors;
+        let jetSound;
 
         let gameStarted = false;
 
@@ -76,7 +77,7 @@ let insideshipSound;
                         title.destroy();
                     }
                 });
-                scene.startSound.play(); // ゲームが開始されたら音声を再生
+                //scene.startSound.play(); // ゲームが開始されたら音声を再生
                 scene.titleSound.play(); // ゲームが開始されたら音声を再生
             });
         }
@@ -97,18 +98,17 @@ let insideshipSound;
 
         }
 
-
         function preload() {
             this.load.image('background', 'assets/background.png');
             this.load.image('spaceship', 'assets/spaceship.png');
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
-            this.load.audio('title', 'assets/title.wav'); // braam音
-            this.load.audio('start', 'assets/start.wav'); // ビープ音
+            this.load.audio('title', 'assets/title.wav'); // ぴー音
+            //this.load.audio('start', 'assets/start.wav'); // ビープ音
             this.load.audio('goal', 'assets/goal.wav'); // ランディング音
             this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
-            this.load.audio('insideship', 'assets/insideship.wav'); // ジェット音
+            this.load.audio('jet', 'assets/jet.wav'); // ジェット音
         }
 
         function create() {
@@ -119,7 +119,7 @@ let insideshipSound;
             // 燃料ゲージの枠を作成
             this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
             this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
-            
+
 
             // 燃料ゲージを作成
             this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
@@ -144,18 +144,17 @@ let insideshipSound;
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
 
-            this.titleSound = this.sound.add('title', { loop: false, volume: 0.3 });
+            this.titleSound = this.sound.add('title', { loop: false, volume: 0.05 });
 
             this.startSound = this.sound.add('start', { loop: true, volume: 0.05 });
 
-            this.goalSound = this.sound.add('goal', { loop: false, volume: 0.3 });
+            this.goalSound = this.sound.add('goal', { loop: false, volume: 0.05 });
             this.goalTimer = 0;
 
-            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 0.4 });
-            
-            insideshipSound = this.sound.add('insideship', { loop: true, volume: 0.8 });
+            this.explosionSound = this.sound.add('explosion', { loop: false, volume: 1 });
+
+            jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
-            
             
 
             // 爆発アニメーションの作成
@@ -190,16 +189,16 @@ let insideshipSound;
                 return;
             }
 
-// ジェット音の再生タイミング    バグあり　キー押しばまま爆発しても止まらない
-if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
-        if (!insideshipSound.isPlaying) {
-            insideshipSound.play();
-        }
-    } else {
-        if (insideshipSound.isPlaying) {
-            insideshipSound.stop();
-        }
-}
+            // ジェット音の再生タイミング    バグあり　キー押しばまま爆発しても止まらない
+            if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
+                if (!jetSound.isPlaying) {
+                    jetSound.play();
+                }
+            } else {
+                if (jetSound.isPlaying) {
+                    jetSound.stop();
+                }
+            }
 
             // 燃料を消費し、燃料ゲージを更新
             if ((this.input.keyboard.createCursorKeys().up.isDown ||
@@ -260,8 +259,8 @@ if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.r
 
                         setTimeout(() => {
                             restartGame(this);
-                        }, 3000);
-                    }, 3000);
+                        }, 2000);
+                    }, 2000);
                 }
             } else {
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
@@ -270,7 +269,6 @@ if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.r
             // 宇宙船が画面下に達したかどうかを確認
             if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 32) {
                 gameOver(this, 'Mission Failed');
-
             }
         }
 
@@ -314,7 +312,7 @@ if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.r
                 setTimeout(() => {
                     scene.scene.restart();
                 }, 3000);
-                
+
             }
         }
 
