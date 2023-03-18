@@ -237,13 +237,23 @@
             } else {
                 this.spaceship.setAccelerationY(0);
             }
+            
             if (this.cursors.left.isDown) {
-                this.spaceship.setAccelerationX(-500);
-            } else if (this.cursors.right.isDown) {
-                this.spaceship.setAccelerationX(500);
-            } else {
-                this.spaceship.setAccelerationX(0);
-            }
+    this.spaceship.setAccelerationX(-500);
+    this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大45度傾ける
+} else if (this.cursors.right.isDown) {
+    this.spaceship.setAccelerationX(500);
+    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大45度傾ける
+} else {
+    this.spaceship.setAccelerationX(0);
+    // 宇宙船の角度を徐々に0度に戻す
+    if (this.spaceship.angle < 0) {
+        this.spaceship.angle = Math.min(this.spaceship.angle + 2, 0);
+    } else if (this.spaceship.angle > 0) {
+        this.spaceship.angle = Math.max(this.spaceship.angle - 2, 0);
+    }
+}
+
 
             // 着陸エリアに接触した時にクリア
             const landingZone = new Phaser.Geom.Rectangle(
@@ -354,7 +364,6 @@
 
         ・スペースデブリ障害物：3個から10個を最小縦横10px、最大縦横40pxサイズをランダムで配置、左右に40px内でランダム方向に動く。ぶつかるとゲームオーバー。
         ・ブラックホール障害：縦横40pxサイズで強い重力が中心にあり、ぶつかるとゲームオーバー。
-        ・宇宙船が左右に移動する時は移動方向に傾けたい
 
     -->
 
