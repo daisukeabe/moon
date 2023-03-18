@@ -98,6 +98,7 @@
 
         }
 
+
         function preload() {
             this.load.image('background', 'assets/background.png');
             this.load.image('spaceship', 'assets/spaceship.png');
@@ -105,7 +106,7 @@
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
             this.load.audio('title', 'assets/title.wav'); // ぴー音
-            //this.load.audio('start', 'assets/start.wav'); // ビープ音
+            this.load.audio('start', 'assets/start.wav'); // ビープ音
             this.load.audio('goal', 'assets/goal.wav'); // ランディング音
             this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
             this.load.audio('jet', 'assets/jet.wav'); // ジェット音
@@ -155,7 +156,8 @@
 
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
-            
+
+
 
             // 爆発アニメーションの作成
             this.anims.create({
