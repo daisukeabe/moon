@@ -77,7 +77,6 @@
                         title.destroy();
                     }
                 });
-                //scene.startSound.play(); // ゲームが開始されたら音声を再生
                 scene.titleSound.play(); // ゲームが開始されたら音声を再生
             });
         }
@@ -91,7 +90,6 @@
             scene.spaceship.setGravityY(80);
             scene.scene.resume(); // ゲームシーンを再開
             scene.startSound.stop();
-  //          scene.jetSound.stop();
             scene.scene.restart();
 
             // 燃料ゲージをリセット
@@ -111,6 +109,7 @@
             this.load.audio('goal', 'assets/goal.wav'); // ランディング音
             this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
             this.load.audio('jet', 'assets/jet.wav'); // ジェット音
+            this.load.audio('empty', 'assets/empty.wav'); // エンプティー音
         }
 
         function create() {
@@ -154,6 +153,8 @@
             this.goalTimer = 0;
 
             this.explosionSound = this.sound.add('explosion', { loop: false, volume: 1 });
+
+            this.emptySound = this.sound.add('empty', { loop: true, volume: 0.1 });
 
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
@@ -218,6 +219,16 @@
                 this.cursors.right.isDown = false;
             }
 
+            // 燃料が90以下になったら点滅させる
+            if (this.fuel <= 90) {
+                const blinkColor = (Math.floor(Date.now() / 400) % 2) === 0 ? 0xaf3035 : 0xffe8f1;
+                this.fuelGauge.clear().fillStyle(blinkColor).fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
+
+                // 燃料が90以下でサウンドが再生されていない場合、emptysoundを再生
+                if (!this.emptySound.isPlaying) {
+                    this.emptySound.play();
+                }
+            }
 
             if (this.cursors.up.isDown) {
                 this.spaceship.setAccelerationY(-500);
@@ -262,6 +273,11 @@
                         this.spaceship.setAccelerationX(0);
                         this.spaceship.setAccelerationY(0);
                         this.spaceship.setGravityY(0);
+
+                        // 空き音を停止
+                        if (this.emptySound.isPlaying) {
+                            this.emptySound.stop();
+                        }
 
                         setTimeout(() => {
                             restartGame(this);
@@ -323,6 +339,11 @@
                 setTimeout(() => {
                     scene.scene.restart();
                 }, 3000);
+
+                // 爆発時にempty音を停止
+                if (scene.emptySound.isPlaying) {
+                    scene.emptySound.stop();
+                }
 
             }
         }
