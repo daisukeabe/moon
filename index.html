@@ -19,7 +19,7 @@
 </head>
 
 <body>
-    <canvas id="game-canvas"></canvas>
+
     <script>
         const config = {
             type: Phaser.AUTO,
@@ -110,7 +110,7 @@
             this.fuel = 250; // 燃料の最大値を設定
 
             // デブリの設定
-            this.debrisGroup = this.physics.add.group(); 
+            this.debrisGroup = this.physics.add.group();
 
             for (let i = 0; i < Phaser.Math.Between(5, 14); i++) { // デブリのランダム数
                 const debrisIndex = Phaser.Math.Between(1, 14);
@@ -119,7 +119,7 @@
                     Phaser.Math.Between(0, this.cameras.main.height * 2 / 3),　// デブリの表示位置
                     `debris${debrisIndex}`
                 );
-                
+
                 const originalWidth = debris.width;
                 const originalHeight = debris.height;
                 const newWidth = Phaser.Math.Between(20, 45); //デブリのランダムサイズ
@@ -190,43 +190,43 @@
                 }
             });
 
-// コントローラーの作成
-const leftButton = document.getElementById('left');
-const upButton = document.getElementById('up');
-const downButton = document.getElementById('down');
-const rightButton = document.getElementById('right');
+            // コントローラーの作成
+            const leftButton = document.getElementById('left');
+            const upButton = document.getElementById('up');
+            const downButton = document.getElementById('down');
+            const rightButton = document.getElementById('right');
 
-leftButton.addEventListener('mousedown', () => {
-    this.cursors.left.isDown = true;
-});
+            leftButton.addEventListener('touchstart', () => {
+                this.cursors.left.isDown = true;
+            });
 
-leftButton.addEventListener('mouseup', () => {
-    this.cursors.left.isDown = false;
-});
+            leftButton.addEventListener('touchend', () => {
+                this.cursors.left.isDown = false;
+            });
 
-upButton.addEventListener('mousedown', () => {
-    this.cursors.up.isDown = true;
-});
+            upButton.addEventListener('touchstart', () => {
+                this.cursors.up.isDown = true;
+            });
 
-upButton.addEventListener('mouseup', () => {
-    this.cursors.up.isDown = false;
-});
+            upButton.addEventListener('touchend', () => {
+                this.cursors.up.isDown = false;
+            });
 
-downButton.addEventListener('mousedown', () => {
-    this.cursors.down.isDown = true;
-});
+            downButton.addEventListener('touchstart', () => {
+                this.cursors.down.isDown = true;
+            });
 
-downButton.addEventListener('mouseup', () => {
-    this.cursors.down.isDown = false;
-});
+            downButton.addEventListener('touchend', () => {
+                this.cursors.down.isDown = false;
+            });
 
-rightButton.addEventListener('mousedown', () => {
-    this.cursors.right.isDown = true;
-});
+            rightButton.addEventListener('touchstart', () => {
+                this.cursors.right.isDown = true;
+            });
 
-rightButton.addEventListener('mouseup', () => {
-    this.cursors.right.isDown = false;
-});
+            rightButton.addEventListener('touchend', () => {
+                this.cursors.right.isDown = false;
+            });
 
 
             showTitle(this);
@@ -359,24 +359,24 @@ rightButton.addEventListener('mouseup', () => {
 
             // デブリの移動
             this.debrisGroup.getChildren().forEach((debris) => {
-            debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
+                debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
 
-            // 画面の端に達したら反対側に折り返す
-            if (debris.x > this.cameras.main.width) {
-                debris.x = -debris.width / 2;
-            } else if (debris.x < -debris.width / 2) {
-                debris.x = this.cameras.main.width + debris.width / 2;
-            }
+                // 画面の端に達したら反対側に折り返す
+                if (debris.x > this.cameras.main.width) {
+                    debris.x = -debris.width / 2;
+                } else if (debris.x < -debris.width / 2) {
+                    debris.x = this.cameras.main.width + debris.width / 2;
+                }
             });
 
             // デブリの回転
             this.debrisGroup.getChildren().forEach((debris) => {
-            debris.angle += debris.getData('rotationSpeed');
+                debris.angle += debris.getData('rotationSpeed');
             });
 
             // 宇宙船とデブリとの衝突をチェック
             this.physics.overlap(this.spaceship, this.debrisGroup, () => {
-                    gameOver(this, 'Craaaash!');
+                gameOver(this, 'Craaaash!');
             });
 
         }
@@ -437,18 +437,18 @@ rightButton.addEventListener('mouseup', () => {
 
     </script>
 
-<div class="button-container">
-    <div class="button-row">
-        <div class="button" id="up">Up</div>
+    <div class="button-container">
+        <div class="button-row">
+            <div class="button" id="up">▲</div>
+        </div>
+        <div class="button-row">
+            <div class="button" id="left">◀</div>
+            <div class="button" id="right">▶</div>
+        </div>
+        <div class="button-row">
+            <div class="button" id="down">▼</div>
+        </div>
     </div>
-    <div class="button-row">
-        <div class="button" id="left">Left</div>
-        <div class="button" id="right">Right</div>
-    </div>
-    <div class="button-row">
-        <div class="button" id="down">Down</div>
-    </div>
-</div>
 
     <!-- 追加要素
 
