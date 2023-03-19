@@ -94,12 +94,43 @@
             this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
             this.load.audio('jet', 'assets/jet.wav'); // ジェット音
             this.load.audio('empty', 'assets/empty.wav'); // エンプティー音
+
+            for (let i = 1; i <= 14; i++) {
+                const paddedIndex = i.toString().padStart(2, '0');
+                this.load.image(`debris${i}`, `assets/debris${paddedIndex}.png`); //デブリ
+            }
+
         }
 
         function create() {
             this.add.image(0, 0, 'background').setOrigin(0, 0);
 
+            this.physics.world.gravity.y = 0; // 全体の重力値を設定
+
             this.fuel = 250; // 燃料の最大値を設定
+
+            // デブリの設定
+            this.debrisGroup = this.physics.add.group(); 
+
+            for (let i = 0; i < Phaser.Math.Between(5, 14); i++) { // デブリのランダム数
+                const debrisIndex = Phaser.Math.Between(1, 14);
+                const debris = this.physics.add.sprite(
+                    Phaser.Math.Between(0, this.cameras.main.width),
+                    Phaser.Math.Between(0, this.cameras.main.height * 2 / 3),　// デブリの表示位置
+                    `debris${debrisIndex}`
+                );
+                
+                const originalWidth = debris.width;
+                const originalHeight = debris.height;
+                const newWidth = Phaser.Math.Between(20, 45); //デブリのランダムサイズ
+                const newHeight = (newWidth * originalHeight) / originalWidth;
+
+                debris.setDisplaySize(newWidth, newHeight);
+                debris.setData('speed', Phaser.Math.FloatBetween(-390, 380)); // デブリの左右のスピードを設定
+                debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
+
+                this.debrisGroup.add(debris);
+            }
 
             // 燃料ゲージの枠を作成
             this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
@@ -286,6 +317,29 @@
             if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 32) {
                 gameOver(this, 'Mission Failed');
             }
+
+            // デブリの移動
+            this.debrisGroup.getChildren().forEach((debris) => {
+            debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
+
+            // 画面の端に達したら反対側に折り返す
+            if (debris.x > this.cameras.main.width) {
+                debris.x = -debris.width / 2;
+            } else if (debris.x < -debris.width / 2) {
+                debris.x = this.cameras.main.width + debris.width / 2;
+            }
+            });
+
+            // デブリの回転
+            this.debrisGroup.getChildren().forEach((debris) => {
+            debris.angle += debris.getData('rotationSpeed');
+            });
+
+            // 宇宙船とデブリとの衝突をチェック
+            this.physics.overlap(this.spaceship, this.debrisGroup, () => {
+                    gameOver(this, 'Craaaash!');
+            });
+
         }
 
         let explosionPlaying = false;
@@ -325,9 +379,9 @@
                     scene.scene.pause();
                 }, 3000); // 3000ミリ秒（3秒）後に実行
 
-                setTimeout(() => {
-                    resetGame(scene);
-                }, 3000);
+                //setTimeout(() => {
+                //    resetGame(scene);
+                //}, 3000);
 
                 gameStarted = false; // ゲームが開始されていない状態に戻す
                 setTimeout(() => {
@@ -345,13 +399,6 @@
     </script>
 
     <!-- 追加要素
-
-        ・スペースデブリ障害物：
-            表示場所は画面上2/3の位置に3個から10個。
-            デブリ用の画像は10個追加。
-            サイズはランダムで最小縦横10px、最大縦横40pxサイズをランダム位置で配置。
-            100px内でランダムスピードで左右方向に動く。
-            ぶつかると爆発してゲームオーバー。
 
         ・ブラックホール障害：
             表示場所は画面上半分の位置にランダムで縦横40pxサイズ。
