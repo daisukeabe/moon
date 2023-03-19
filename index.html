@@ -190,6 +190,45 @@
                 }
             });
 
+// コントローラーの作成
+const leftButton = document.getElementById('left');
+const upButton = document.getElementById('up');
+const downButton = document.getElementById('down');
+const rightButton = document.getElementById('right');
+
+leftButton.addEventListener('mousedown', () => {
+    this.cursors.left.isDown = true;
+});
+
+leftButton.addEventListener('mouseup', () => {
+    this.cursors.left.isDown = false;
+});
+
+upButton.addEventListener('mousedown', () => {
+    this.cursors.up.isDown = true;
+});
+
+upButton.addEventListener('mouseup', () => {
+    this.cursors.up.isDown = false;
+});
+
+downButton.addEventListener('mousedown', () => {
+    this.cursors.down.isDown = true;
+});
+
+downButton.addEventListener('mouseup', () => {
+    this.cursors.down.isDown = false;
+});
+
+rightButton.addEventListener('mousedown', () => {
+    this.cursors.right.isDown = true;
+});
+
+rightButton.addEventListener('mouseup', () => {
+    this.cursors.right.isDown = false;
+});
+
+
             showTitle(this);
 
         }
@@ -397,6 +436,19 @@
         }
 
     </script>
+
+<div class="button-container">
+    <div class="button-row">
+        <div class="button" id="up">Up</div>
+    </div>
+    <div class="button-row">
+        <div class="button" id="left">Left</div>
+        <div class="button" id="right">Right</div>
+    </div>
+    <div class="button-row">
+        <div class="button" id="down">Down</div>
+    </div>
+</div>
 
     <!-- 追加要素
 
