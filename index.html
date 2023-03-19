@@ -14,23 +14,7 @@
     <meta property="og:site_name" content="Moonlander" />
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
-    <style>
-        html,
-        body {
-            margin: 0 0 0 -100px;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: black;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        canvas {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="/style.css">
     <script src="//cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
 
@@ -237,22 +221,22 @@
             } else {
                 this.spaceship.setAccelerationY(0);
             }
-            
+
             if (this.cursors.left.isDown) {
-    this.spaceship.setAccelerationX(-500);
-    this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大45度傾ける
-} else if (this.cursors.right.isDown) {
-    this.spaceship.setAccelerationX(500);
-    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大45度傾ける
-} else {
-    this.spaceship.setAccelerationX(0);
-    // 宇宙船の角度を徐々に0度に戻す
-    if (this.spaceship.angle < 0) {
-        this.spaceship.angle = Math.min(this.spaceship.angle + 2, 0);
-    } else if (this.spaceship.angle > 0) {
-        this.spaceship.angle = Math.max(this.spaceship.angle - 2, 0);
-    }
-}
+                this.spaceship.setAccelerationX(-500);
+                this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大45度傾ける
+            } else if (this.cursors.right.isDown) {
+                this.spaceship.setAccelerationX(500);
+                this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大45度傾ける
+            } else {
+                this.spaceship.setAccelerationX(0);
+                // 宇宙船の角度を徐々に0度に戻す
+                if (this.spaceship.angle < 0) {
+                    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 0);
+                } else if (this.spaceship.angle > 0) {
+                    this.spaceship.angle = Math.max(this.spaceship.angle - 2, 0);
+                }
+            }
 
 
             // 着陸エリアに接触した時にクリア
@@ -270,7 +254,7 @@
                     this.goalTimer = 0; // タイマーをリセットする
                     this.scene.pause(); // 一時停止
                     this.goalSound.play(); // ゴール時に音を再生
-                    this.add.text(this.game.config.width / 2, this.game.config.height / 2, 'Mission Complete!', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5);
+                    this.add.text(this.game.config.width / 2, this.game.config.height / 2, 'Good Landing', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5);
 
                     // ゴール時にjet音を停止
                     if (jetSound.isPlaying) {
@@ -362,8 +346,18 @@
 
     <!-- 追加要素
 
-        ・スペースデブリ障害物：3個から10個を最小縦横10px、最大縦横40pxサイズをランダムで配置、左右に40px内でランダム方向に動く。ぶつかるとゲームオーバー。
-        ・ブラックホール障害：縦横40pxサイズで強い重力が中心にあり、ぶつかるとゲームオーバー。
+        ・スペースデブリ障害物：
+            表示場所は画面上2/3の位置に3個から10個。
+            デブリ用の画像は10個追加。
+            サイズはランダムで最小縦横10px、最大縦横40pxサイズをランダム位置で配置。
+            100px内でランダムスピードで左右方向に動く。
+            ぶつかると爆発してゲームオーバー。
+
+        ・ブラックホール障害：
+            表示場所は画面上半分の位置にランダムで縦横40pxサイズ。
+            強い重力が中心にあり宇宙船が吸い込まれる。
+            ぶつかると宇宙船が徐々に小さくなって高速移動エフェクトを入れてワープする。
+            ワープエフェクトが終了すると https://mypong-phi.vercel.app/ に遷移する。
 
     -->
 
