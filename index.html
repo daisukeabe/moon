@@ -116,7 +116,7 @@
                 const debrisIndex = Phaser.Math.Between(1, 14);
                 const debris = this.physics.add.sprite(
                     Phaser.Math.Between(0, this.cameras.main.width),
-                    Phaser.Math.Between(this.cameras.main.height * 1 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置を3/5の中央に変更
+                    Phaser.Math.Between(this.cameras.main.height * 2 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置を3/5の中央に変更
                     `debris${debrisIndex}`
                 );
 
@@ -126,7 +126,7 @@
                 const newHeight = (newWidth * originalHeight) / originalWidth;
 
                 debris.setDisplaySize(newWidth, newHeight);
-                debris.setData('speed', Phaser.Math.FloatBetween(-500, 500)); // デブリの左右のスピードを設定
+                debris.setData('speed', Phaser.Math.FloatBetween(-250, 300)); // デブリの左右のスピードを設定
                 debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
 
                 this.debrisGroup.add(debris);
