@@ -126,7 +126,7 @@
                 const newHeight = (newWidth * originalHeight) / originalWidth;
 
                 debris.setDisplaySize(newWidth, newHeight);
-                debris.setData('speed', Phaser.Math.FloatBetween(-390, 380)); // デブリの左右のスピードを設定
+                debris.setData('speed', Phaser.Math.FloatBetween(-500, 500)); // デブリの左右のスピードを設定
                 debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
 
                 this.debrisGroup.add(debris);
@@ -362,10 +362,11 @@
                 debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
 
                 // 画面の端に達したら反対側に折り返す
-                if (debris.x > this.cameras.main.width) {
-                    debris.x = -debris.width / 2;
-                } else if (debris.x < -debris.width / 2) {
-                    debris.x = this.cameras.main.width + debris.width / 2;
+                const newDebrisWidth = debris.displayWidth;
+                if (debris.x > this.cameras.main.width + newDebrisWidth / 2) {
+                    debris.x = -newDebrisWidth / 2;
+                } else if (debris.x < -newDebrisWidth / 2) {
+                    debris.x = this.cameras.main.width + newDebrisWidth / 2;
                 }
             });
 
