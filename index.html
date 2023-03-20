@@ -50,7 +50,8 @@
             const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
             title.setDisplaySize(800, 500);
             title.setInteractive();
-
+            
+            // タイトルクリックされたときにゲームシーンを開始する
             title.once('pointerup', () => {
                 gameStarted = true;
                 scene.tweens.add({
@@ -63,7 +64,23 @@
                 });
                 scene.titleSound.play(); // ゲームが開始されたら音声を再生
             });
+
+            // Enterキーが押されたときにゲームシーンを開始する
+            scene.input.keyboard.once('keydown-ENTER', () => {
+                gameStarted = true;
+                scene.tweens.add({
+                    targets: title,
+                    alpha: 0,
+                    duration: 500,
+                    onComplete: () => {
+                        title.destroy();
+                    }
+                });
+                scene.titleSound.play(); // ゲームが開始されたら音声を再生
+            });
+
         }
+
 
         function restartGame(scene) {
             gameStarted = false;
@@ -103,6 +120,9 @@
         }
 
         function create() {
+            // キーボード入力の設定
+            const enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+
             this.add.image(0, 0, 'background').setOrigin(0, 0);
 
             this.physics.world.gravity.y = 0; // 全体の重力値を設定
@@ -112,11 +132,11 @@
             // デブリの設定
             this.debrisGroup = this.physics.add.group();
 
-            for (let i = 0; i < Phaser.Math.Between(5, 12); i++) { // デブリのランダム数
+            for (let i = 0; i < Phaser.Math.Between(5, 14); i++) { // デブリのランダム数
                 const debrisIndex = Phaser.Math.Between(1, 15);
                 const debris = this.physics.add.sprite(
                     Phaser.Math.Between(0, this.cameras.main.width),
-                    Phaser.Math.Between(this.cameras.main.height * 2 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置
+                    Phaser.Math.Between(this.cameras.main.height * 1.5 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置
                     `debris${debrisIndex}`
                 );
 
@@ -126,7 +146,7 @@
                 const newHeight = (newWidth * originalHeight) / originalWidth;
 
                 debris.setDisplaySize(newWidth, newHeight);
-                debris.setData('speed', Phaser.Math.FloatBetween(-250, 250)); // デブリの左右のスピードを設定
+                debris.setData('speed', Phaser.Math.FloatBetween(-235, 235)); // デブリの左右のスピードをランダム設定
                 debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
 
                 this.debrisGroup.add(debris);
@@ -419,9 +439,9 @@
                     scene.scene.pause();
                 }, 3000); // 3000ミリ秒（3秒）後に実行
 
-                //setTimeout(() => {
-                //    resetGame(scene);
-                //}, 3000);
+                setTimeout(() => {
+                    resetGame(scene);
+                }, 3000);
 
                 gameStarted = false; // ゲームが開始されていない状態に戻す
                 setTimeout(() => {
