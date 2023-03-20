@@ -95,7 +95,7 @@
             this.load.audio('jet', 'assets/jet.wav'); // ジェット音
             this.load.audio('empty', 'assets/empty.wav'); // エンプティー音
 
-            for (let i = 1; i <= 14; i++) {
+            for (let i = 1; i <= 15; i++) {
                 const paddedIndex = i.toString().padStart(2, '0');
                 this.load.image(`debris${i}`, `assets/debris${paddedIndex}.png`); //デブリ
             }
@@ -112,11 +112,11 @@
             // デブリの設定
             this.debrisGroup = this.physics.add.group();
 
-            for (let i = 0; i < Phaser.Math.Between(5, 14); i++) { // デブリのランダム数
-                const debrisIndex = Phaser.Math.Between(1, 14);
+            for (let i = 0; i < Phaser.Math.Between(5, 12); i++) { // デブリのランダム数
+                const debrisIndex = Phaser.Math.Between(1, 15);
                 const debris = this.physics.add.sprite(
                     Phaser.Math.Between(0, this.cameras.main.width),
-                    Phaser.Math.Between(this.cameras.main.height * 2 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置を3/5の中央に変更
+                    Phaser.Math.Between(this.cameras.main.height * 2 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置
                     `debris${debrisIndex}`
                 );
 
@@ -126,7 +126,7 @@
                 const newHeight = (newWidth * originalHeight) / originalWidth;
 
                 debris.setDisplaySize(newWidth, newHeight);
-                debris.setData('speed', Phaser.Math.FloatBetween(-250, 300)); // デブリの左右のスピードを設定
+                debris.setData('speed', Phaser.Math.FloatBetween(-250, 250)); // デブリの左右のスピードを設定
                 debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
 
                 this.debrisGroup.add(debris);
