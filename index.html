@@ -169,7 +169,6 @@
             this.moon.displayWidth = 30; // 以前の値の半分に変更
             this.moon.displayHeight = 50; // 以前の値の半分に変更
             this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5);
-
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship'); // Y座標を修正
             this.spaceship.setCollideWorldBounds(true); // 画面外に出ないように設定
             this.spaceship.setDrag(0); // 慣性の設定
@@ -179,18 +178,12 @@
             this.spaceship.displayWidth = 50; // 以前の値の半分に変更
             this.spaceship.displayHeight = 50; // 以前の値の半分に変更
             this.cursors = this.input.keyboard.createCursorKeys();
-
             this.titleSound = this.sound.add('title', { loop: false, volume: 0.05 });
-
             this.startSound = this.sound.add('start', { loop: true, volume: 0.05 });
-
             this.goalSound = this.sound.add('goal', { loop: false, volume: 0.05 });
             this.goalTimer = 0;
-
             this.explosionSound = this.sound.add('explosion', { loop: false, volume: 1 });
-
             this.emptySound = this.sound.add('empty', { loop: true, volume: 0.1 });
-
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
@@ -198,7 +191,7 @@
             this.anims.create({
                 key: 'explode',
                 frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 64 }),
-                frameRate: 32,
+                frameRate: 24,
                 repeat: 0,
                 onUpdate: function (anim, frame, gameObject) {
                     if (frame.prevFrame !== null) {
@@ -211,42 +204,50 @@
             });
 
             // コントローラーの作成
-            const leftButton = document.getElementById('left');
-            const upButton = document.getElementById('up');
-            const downButton = document.getElementById('down');
-            const rightButton = document.getElementById('right');
+            const arrows = ['left', 'up', 'down', 'right']
+            const buttons = arrows.map((cursor) => document.getElementById(cursor))
+            buttons.forEach((v, i) => {
+                v.addEventListener('touchstart', () => this.cursors[arrows[i]].isDown = true);
+                v.addEventListener('touchend', () => this.cursors[arrows[i]].isDown = false);
+            })
 
-            leftButton.addEventListener('touchstart', () => {
-                this.cursors.left.isDown = true;
-            });
+            //AIのコード↓　↑森下コード
+            // const leftButton = document.getElementById('left');
+            // const upButton = document.getElementById('up');
+            // const downButton = document.getElementById('down');
+            // const rightButton = document.getElementById('right');
 
-            leftButton.addEventListener('touchend', () => {
-                this.cursors.left.isDown = false;
-            });
+            // leftButton.addEventListener('touchstart', () => {
+            //     this.cursors.left.isDown = true;
+            // });
 
-            upButton.addEventListener('touchstart', () => {
-                this.cursors.up.isDown = true;
-            });
+            // leftButton.addEventListener('touchend', () => {
+            //     this.cursors.left.isDown = false;
+            // });
 
-            upButton.addEventListener('touchend', () => {
-                this.cursors.up.isDown = false;
-            });
+            // upButton.addEventListener('touchstart', () => {
+            //     this.cursors.up.isDown = true;
+            // });
 
-            downButton.addEventListener('touchstart', () => {
-                this.cursors.down.isDown = true;
-            });
+            // upButton.addEventListener('touchend', () => {
+            //     this.cursors.up.isDown = false;
+            // });
 
-            downButton.addEventListener('touchend', () => {
-                this.cursors.down.isDown = false;
-            });
+            // downButton.addEventListener('touchstart', () => {
+            //     this.cursors.down.isDown = true;
+            // });
 
-            rightButton.addEventListener('touchstart', () => {
-                this.cursors.right.isDown = true;
-            });
+            // downButton.addEventListener('touchend', () => {
+            //     this.cursors.down.isDown = false;
+            // });
 
-            rightButton.addEventListener('touchend', () => {
-                this.cursors.right.isDown = false;
-            });
+            // rightButton.addEventListener('touchstart', () => {
+            //     this.cursors.right.isDown = true;
+            // });
+
+            // rightButton.addEventListener('touchend', () => {
+            //     this.cursors.right.isDown = false;
+            // });
 
 
             showTitle(this);
