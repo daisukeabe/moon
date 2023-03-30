@@ -102,6 +102,7 @@
         function preload() {
             this.load.image('background', 'assets/background.png');
             this.load.image('spaceship', 'assets/spaceship.png');
+            this.load.image('spaceshipshadow', 'assets/spaceshipshadow.png');
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
@@ -187,6 +188,11 @@
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
+// 着陸の影を作成
+this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y - 5, 'spaceshipshadow');
+this.spaceshipShadow.displayWidth = 50; // 宇宙船と同じサイズに設定
+this.spaceshipShadow.displayHeight = 50; // 宇宙船と同じサイズに設定
+
             // 爆発アニメーションの作成
             this.anims.create({
                 key: 'explode',
@@ -210,45 +216,6 @@
                 v.addEventListener('touchstart', () => this.cursors[arrows[i]].isDown = true);
                 v.addEventListener('touchend', () => this.cursors[arrows[i]].isDown = false);
             })
-
-            //AIのコード↓　↑森下コード
-            // const leftButton = document.getElementById('left');
-            // const upButton = document.getElementById('up');
-            // const downButton = document.getElementById('down');
-            // const rightButton = document.getElementById('right');
-
-            // leftButton.addEventListener('touchstart', () => {
-            //     this.cursors.left.isDown = true;
-            // });
-
-            // leftButton.addEventListener('touchend', () => {
-            //     this.cursors.left.isDown = false;
-            // });
-
-            // upButton.addEventListener('touchstart', () => {
-            //     this.cursors.up.isDown = true;
-            // });
-
-            // upButton.addEventListener('touchend', () => {
-            //     this.cursors.up.isDown = false;
-            // });
-
-            // downButton.addEventListener('touchstart', () => {
-            //     this.cursors.down.isDown = true;
-            // });
-
-            // downButton.addEventListener('touchend', () => {
-            //     this.cursors.down.isDown = false;
-            // });
-
-            // rightButton.addEventListener('touchstart', () => {
-            //     this.cursors.right.isDown = true;
-            // });
-
-            // rightButton.addEventListener('touchend', () => {
-            //     this.cursors.right.isDown = false;
-            // });
-
 
             showTitle(this);
 
@@ -329,6 +296,22 @@
                 }
             }
 
+// 宇宙船の影の位置を更新
+this.spaceshipShadow.x = this.spaceship.x;
+this.spaceshipShadow.y = this.moon.y - 5;
+
+// ゴールエリアからの高さを計算
+const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 200), 0);
+
+// 透明度を計算（高さに応じて0〜1の範囲）
+const shadowAlpha = heightAboveGoal / 100;
+this.spaceshipShadow.alpha = shadowAlpha;
+
+// 影のサイズを計算（高さに応じて50〜100の範囲）
+const shadowSize = 100 - (heightAboveGoal / 3);
+this.spaceshipShadow.displayWidth = shadowSize;
+this.spaceshipShadow.displayHeight = shadowSize;
+
 
             // 着陸エリアに接触した時にクリア
             const landingZone = new Phaser.Geom.Rectangle(
@@ -397,9 +380,9 @@
             });
 
             // 宇宙船とデブリとの衝突をチェック
-            this.physics.overlap(this.spaceship, this.debrisGroup, () => {
-                gameOver(this, 'Craaaash!');
-            });
+            // this.physics.overlap(this.spaceship, this.debrisGroup, () => {
+            //     gameOver(this, 'Craaaash!');
+            // });
 
         }
 
