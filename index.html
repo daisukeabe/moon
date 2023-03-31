@@ -3,14 +3,12 @@
 
 <head prefix="og:http://ogp.me/ns#">
     <title>Moonlander</title>
-    <meta name="description"
-        content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
+    <meta name="description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
     <meta charset="utf-8">
     <meta property="og:url" content="https://moon-alpha.vercel.app/" />
     <meta property="og:type" content="product" />
     <meta property="og:title" content="Moonlander" />
-    <meta property="og:description"
-        content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
+    <meta property="og:description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
     <meta property="og:site_name" content="Moonlander" />
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
@@ -50,7 +48,9 @@
             const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
             title.setDisplaySize(800, 500);
             title.setInteractive();
-            
+
+            scene.spaceshipShadow.setAlpha(0);
+
             // タイトルクリックされたときにゲームシーンを開始する
             title.once('pointerup', () => {
                 gameStarted = true;
@@ -77,8 +77,10 @@
                     }
                 });
                 scene.titleSound.play(); // ゲームが開始されたら音声を再生
-            });
 
+                // 宇宙船の影の透明度を1に戻す
+                scene.spaceshipShadow.setAlpha(1);
+            });
         }
 
 
@@ -95,7 +97,6 @@
 
             // 燃料ゲージをリセット
             scene.fuel = 200; // 燃料を最大値に戻す
-
         }
 
 
@@ -117,7 +118,6 @@
                 const paddedIndex = i.toString().padStart(2, '0');
                 this.load.image(`debris${i}`, `assets/debris${paddedIndex}.png`); //デブリ
             }
-
         }
 
         function create() {
@@ -132,7 +132,6 @@
 
             // デブリの設定
             this.debrisGroup = this.physics.add.group();
-
             for (let i = 0; i < Phaser.Math.Between(5, 14); i++) { // デブリのランダム数
                 const debrisIndex = Phaser.Math.Between(1, 15);
                 const debris = this.physics.add.sprite(
@@ -157,27 +156,33 @@
             this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
             this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
 
-
             // 燃料ゲージを作成
             this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
             this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
-
 
             // 着陸エリアのスプライトを作成
             this.moon = this.add.sprite(Phaser.Math.Between(200, this.game.config.width - 200), this.game.config.height - 100, 'flag');
             this.physics.add.existing(this.moon, true); // 静的な物体に設定
             this.moon.body.allowGravity = false;
-            this.moon.displayWidth = 30; // 以前の値の半分に変更
-            this.moon.displayHeight = 50; // 以前の値の半分に変更
+            this.moon.displayWidth = 30;
+            this.moon.displayHeight = 50;
             this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5);
-            this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship'); // Y座標を修正
+
+            // 宇宙船のスプライトを作成
+            this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship');
             this.spaceship.setCollideWorldBounds(true); // 画面外に出ないように設定
             this.spaceship.setDrag(0); // 慣性の設定
             this.spaceship.setAngularDrag(8); // 慣性の設定
             this.spaceship.setMaxVelocity(100000); // 最大速度の設定
             this.spaceship.setGravityY(80);
-            this.spaceship.displayWidth = 50; // 以前の値の半分に変更
-            this.spaceship.displayHeight = 50; // 以前の値の半分に変更
+            this.spaceship.displayWidth = 50;
+            this.spaceship.displayHeight = 50;
+            
+            // 着陸の影を作成
+            this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y - -55, 'spaceshipshadow');
+            this.spaceshipShadow.displayWidth = 50; // 宇宙船と同じサイズに設定
+            this.spaceshipShadow.displayHeight = 50; // 宇宙船と同じサイズに設定
+
             this.cursors = this.input.keyboard.createCursorKeys();
             this.titleSound = this.sound.add('title', { loop: false, volume: 0.05 });
             this.startSound = this.sound.add('start', { loop: true, volume: 0.05 });
@@ -187,12 +192,7 @@
             this.emptySound = this.sound.add('empty', { loop: true, volume: 0.1 });
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
-
-// 着陸の影を作成
-this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y - 5, 'spaceshipshadow');
-this.spaceshipShadow.displayWidth = 50; // 宇宙船と同じサイズに設定
-this.spaceshipShadow.displayHeight = 50; // 宇宙船と同じサイズに設定
-
+            
             // 爆発アニメーションの作成
             this.anims.create({
                 key: 'explode',
@@ -218,7 +218,6 @@ this.spaceshipShadow.displayHeight = 50; // 宇宙船と同じサイズに設定
             })
 
             showTitle(this);
-
         }
 
         function update() {
@@ -296,22 +295,21 @@ this.spaceshipShadow.displayHeight = 50; // 宇宙船と同じサイズに設定
                 }
             }
 
-// 宇宙船の影の位置を更新
-this.spaceshipShadow.x = this.spaceship.x;
-this.spaceshipShadow.y = this.moon.y - 5;
+            // // 宇宙船の影の位置を更新
+            this.spaceshipShadow.x = this.spaceship.x;
+            this.spaceshipShadow.y = this.moon.y - -73;
 
-// ゴールエリアからの高さを計算
-const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 200), 0);
+            // ゴールエリアからの高さを計算
+            const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 290), 0);
 
-// 透明度を計算（高さに応じて0〜1の範囲）
-const shadowAlpha = heightAboveGoal / 100;
-this.spaceshipShadow.alpha = shadowAlpha;
+            // 透明度を計算（高さに応じて0〜1の範囲）
+            const shadowAlpha = heightAboveGoal / 290;
+            this.spaceshipShadow.alpha = shadowAlpha;
 
-// 影のサイズを計算（高さに応じて50〜100の範囲）
-const shadowSize = 100 - (heightAboveGoal / 3);
-this.spaceshipShadow.displayWidth = shadowSize;
-this.spaceshipShadow.displayHeight = shadowSize;
-
+            // 影のサイズを計算（高さに応じて50〜100の範囲）
+            const shadowSize = 110 - (heightAboveGoal / 4.55);
+            this.spaceshipShadow.displayWidth = shadowSize;
+            this.spaceshipShadow.displayHeight = shadowSize;
 
             // 着陸エリアに接触した時にクリア
             const landingZone = new Phaser.Geom.Rectangle(
@@ -356,8 +354,8 @@ this.spaceshipShadow.displayHeight = shadowSize;
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
             }
 
-            // 宇宙船が画面下に達したかどうかを確認
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 32) {
+            // 宇宙船が画面下に達したかどうかを確認 爆発の位置
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 36) {
                 gameOver(this, 'Mission Failed');
             }
 
@@ -380,9 +378,9 @@ this.spaceshipShadow.displayHeight = shadowSize;
             });
 
             // 宇宙船とデブリとの衝突をチェック
-            // this.physics.overlap(this.spaceship, this.debrisGroup, () => {
-            //     gameOver(this, 'Craaaash!');
-            // });
+            this.physics.overlap(this.spaceship, this.debrisGroup, () => {
+                gameOver(this, 'Craaaash!');
+            });
 
         }
 
@@ -407,6 +405,9 @@ this.spaceshipShadow.displayHeight = shadowSize;
 
                 // 宇宙船を非表示にする
                 scene.spaceship.setVisible(false);
+
+                // 宇宙船の影を非表示にする
+                scene.spaceshipShadow.setVisible(false);
 
                 explosion.on('animationcomplete', () => {
                     explosionPlaying = false;
@@ -443,14 +444,14 @@ this.spaceshipShadow.displayHeight = shadowSize;
     </script>
 
 
-<div class="button-container">
-    <div class="button-row">
-        <div class="button" id="left">　◁　</div>
-        <div class="button" id="right">　▷　</div>
-        <div class="button" id="up">　△　</div>
-        <div class="button" id="down">　▽　</div>
+    <div class="button-container">
+        <div class="button-row">
+            <div class="button" id="left">　◁　</div>
+            <div class="button" id="right">　▷　</div>
+            <div class="button" id="up">　△　</div>
+            <div class="button" id="down">　▽　</div>
+        </div>
     </div>
-</div>
 
     <!-- 追加要素
 
