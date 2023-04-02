@@ -3,12 +3,14 @@
 
 <head prefix="og:http://ogp.me/ns#">
     <title>Moonlander</title>
-    <meta name="description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
+    <meta name="description"
+        content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
     <meta charset="utf-8">
     <meta property="og:url" content="https://moon-alpha.vercel.app/" />
     <meta property="og:type" content="product" />
     <meta property="og:title" content="Moonlander" />
-    <meta property="og:description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
+    <meta property="og:description"
+        content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
     <meta property="og:site_name" content="Moonlander" />
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
@@ -132,8 +134,8 @@
 
             // デブリの設定
             this.debrisGroup = this.physics.add.group();
-            for (let i = 0; i < Phaser.Math.Between(5, 14); i++) { // デブリのランダム数
-                const debrisIndex = Phaser.Math.Between(1, 15);
+            for (let i = 0; i < Phaser.Math.Between(6, 10); i++) { // デブリのランダム数
+                const debrisIndex = Phaser.Math.Between(5, 15);
                 const debris = this.physics.add.sprite(
                     Phaser.Math.Between(0, this.cameras.main.width),
                     Phaser.Math.Between(this.cameras.main.height * 1.5 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置
@@ -166,7 +168,7 @@
             this.moon.body.allowGravity = false;
             this.moon.displayWidth = 30;
             this.moon.displayHeight = 50;
-            this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5);
+            this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5 + 10);
 
             // 宇宙船のスプライトを作成
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, 'spaceship');
@@ -177,7 +179,7 @@
             this.spaceship.setGravityY(80);
             this.spaceship.displayWidth = 50;
             this.spaceship.displayHeight = 50;
-            
+
             // 着陸の影を作成
             this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y - -55, 'spaceshipshadow');
             this.spaceshipShadow.displayWidth = 50; // 宇宙船と同じサイズに設定
@@ -192,7 +194,7 @@
             this.emptySound = this.sound.add('empty', { loop: true, volume: 0.1 });
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
-            
+
             // 爆発アニメーションの作成
             this.anims.create({
                 key: 'explode',
@@ -232,89 +234,91 @@
                 return;
             }
 
-            // ジェット音の再生タイミング
-            if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
-                if (!jetSound.isPlaying) {
-                    jetSound.play();
+            if (gameStarted) {
+                // ジェット音の再生タイミング
+                if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
+                    if (!jetSound.isPlaying) {
+                        jetSound.play();
+                    }
+                } else {
+                    if (jetSound.isPlaying) {
+                        jetSound.stop();
+                    }
                 }
-            } else {
-                if (jetSound.isPlaying) {
-                    jetSound.stop();
+
+                // 燃料を消費し、燃料ゲージを更新
+                if ((this.input.keyboard.createCursorKeys().up.isDown ||
+                    this.input.keyboard.createCursorKeys().down.isDown ||
+                    this.input.keyboard.createCursorKeys().left.isDown ||
+                    this.input.keyboard.createCursorKeys().right.isDown) && this.fuel > 0) {
+                    this.fuel -= 1;
+                    this.fuelGauge.clear().fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
                 }
-            }
 
-            // 燃料を消費し、燃料ゲージを更新
-            if ((this.input.keyboard.createCursorKeys().up.isDown ||
-                this.input.keyboard.createCursorKeys().down.isDown ||
-                this.input.keyboard.createCursorKeys().left.isDown ||
-                this.input.keyboard.createCursorKeys().right.isDown) && this.fuel > 0) {
-                this.fuel -= 1;
-                this.fuelGauge.clear().fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
-            }
-
-            // 燃料がなくなったら操作を無効にする
-            if (this.fuel <= 0) {
-                this.cursors.up.isDown = false;
-                this.cursors.down.isDown = false;
-                this.cursors.left.isDown = false;
-                this.cursors.right.isDown = false;
-            }
-
-            // 燃料が90以下になったら点滅させる
-            if (this.fuel <= 90) {
-                const blinkColor = (Math.floor(Date.now() / 400) % 2) === 0 ? 0xaf3035 : 0xffe8f1;
-                this.fuelGauge.clear().fillStyle(blinkColor).fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
-
-                // 燃料が90以下でサウンドが再生されていない場合、emptysoundを再生
-                if (!this.emptySound.isPlaying) {
-                    this.emptySound.play();
+                // 燃料がなくなったら操作を無効にする
+                if (this.fuel <= 0) {
+                    this.cursors.up.isDown = false;
+                    this.cursors.down.isDown = false;
+                    this.cursors.left.isDown = false;
+                    this.cursors.right.isDown = false;
                 }
-            }
 
-            if (this.cursors.up.isDown) {
-                this.spaceship.setAccelerationY(-500);
-            } else if (this.cursors.down.isDown) {
-                this.spaceship.setAccelerationY(500);
-            } else {
-                this.spaceship.setAccelerationY(0);
-            }
+                // 燃料が90以下になったら点滅させる
+                if (this.fuel <= 90) {
+                    const blinkColor = (Math.floor(Date.now() / 400) % 2) === 0 ? 0xaf3035 : 0xffe8f1;
+                    this.fuelGauge.clear().fillStyle(blinkColor).fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, this.fuel, 16);
 
-            if (this.cursors.left.isDown) {
-                this.spaceship.setAccelerationX(-500);
-                this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大45度傾ける
-            } else if (this.cursors.right.isDown) {
-                this.spaceship.setAccelerationX(500);
-                this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大45度傾ける
-            } else {
-                this.spaceship.setAccelerationX(0);
-                // 宇宙船の角度を徐々に0度に戻す
-                if (this.spaceship.angle < 0) {
-                    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 0);
-                } else if (this.spaceship.angle > 0) {
-                    this.spaceship.angle = Math.max(this.spaceship.angle - 2, 0);
+                    // 燃料が90以下でサウンドが再生されていない場合、emptysoundを再生
+                    if (!this.emptySound.isPlaying) {
+                        this.emptySound.play();
+                    }
                 }
+
+                if (this.cursors.up.isDown) {
+                    this.spaceship.setAccelerationY(-500);
+                } else if (this.cursors.down.isDown) {
+                    this.spaceship.setAccelerationY(500);
+                } else {
+                    this.spaceship.setAccelerationY(0);
+                }
+
+                if (this.cursors.left.isDown) {
+                    this.spaceship.setAccelerationX(-500);
+                    this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大45度傾ける
+                } else if (this.cursors.right.isDown) {
+                    this.spaceship.setAccelerationX(500);
+                    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大45度傾ける
+                } else {
+                    this.spaceship.setAccelerationX(0);
+                    // 宇宙船の角度を徐々に0度に戻す
+                    if (this.spaceship.angle < 0) {
+                        this.spaceship.angle = Math.min(this.spaceship.angle + 2, 0);
+                    } else if (this.spaceship.angle > 0) {
+                        this.spaceship.angle = Math.max(this.spaceship.angle - 2, 0);
+                    }
+                }
+
+                // // 宇宙船の影の位置を更新
+                this.spaceshipShadow.x = this.spaceship.x;
+                this.spaceshipShadow.y = this.moon.y - -74;
+
+                // ゴールエリアからの高さを計算
+                const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 280), 0);
+
+                // 透明度を計算（高さに応じて0〜1の範囲）
+                const shadowAlpha = heightAboveGoal / 280;
+                this.spaceshipShadow.alpha = shadowAlpha;
+
+                // 影のサイズを計算（高さに応じて50〜100の範囲）
+                const shadowSize = 120 - (heightAboveGoal / 4.55);
+                this.spaceshipShadow.displayWidth = shadowSize;
+                this.spaceshipShadow.displayHeight = shadowSize;
             }
-
-            // // 宇宙船の影の位置を更新
-            this.spaceshipShadow.x = this.spaceship.x;
-            this.spaceshipShadow.y = this.moon.y - -73;
-
-            // ゴールエリアからの高さを計算
-            const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 290), 0);
-
-            // 透明度を計算（高さに応じて0〜1の範囲）
-            const shadowAlpha = heightAboveGoal / 290;
-            this.spaceshipShadow.alpha = shadowAlpha;
-
-            // 影のサイズを計算（高さに応じて50〜100の範囲）
-            const shadowSize = 110 - (heightAboveGoal / 4.55);
-            this.spaceshipShadow.displayWidth = shadowSize;
-            this.spaceshipShadow.displayHeight = shadowSize;
 
             // 着陸エリアに接触した時にクリア
             const landingZone = new Phaser.Geom.Rectangle(
                 this.moon.x - this.moon.displayWidth / 2,
-                this.moon.y + this.moon.displayHeight / 2 - 5,
+                this.moon.y + this.moon.displayHeight / 2 - 5 + 10,
                 this.moon.displayWidth,
                 5
             );
@@ -355,7 +359,7 @@
             }
 
             // 宇宙船が画面下に達したかどうかを確認 爆発の位置
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 36) {
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 52) {
                 gameOver(this, 'Mission Failed');
             }
 
