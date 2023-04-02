@@ -3,14 +3,12 @@
 
 <head prefix="og:http://ogp.me/ns#">
     <title>Moonlander</title>
-    <meta name="description"
-        content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
+    <meta name="description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
     <meta charset="utf-8">
     <meta property="og:url" content="https://moon-alpha.vercel.app/" />
     <meta property="og:type" content="product" />
     <meta property="og:title" content="Moonlander" />
-    <meta property="og:description"
-        content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
+    <meta property="og:description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
     <meta property="og:site_name" content="Moonlander" />
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
@@ -233,6 +231,13 @@
             if (!gameStarted) {
                 return;
             }
+
+            // 宇宙船の速度に基づいてカメラの位置を調整（パララックス効果）
+            const maxCameraOffset = 100;
+            const offsetX = Phaser.Math.Clamp(-this.spaceship.body.velocity.x / 50, -maxCameraOffset, maxCameraOffset);
+            const offsetY = Phaser.Math.Clamp(-this.spaceship.body.velocity.y / 50, -maxCameraOffset, maxCameraOffset);
+            this.cameras.main.scrollX = offsetX;
+            this.cameras.main.scrollY = offsetY;
 
             if (gameStarted) {
                 // ジェット音の再生タイミング
