@@ -311,7 +311,7 @@
 
                 // // 宇宙船の影の位置を更新
                 this.spaceshipShadow.x = this.spaceship.x;
-                this.spaceshipShadow.y = this.moon.y - -70;
+                this.spaceshipShadow.y = this.moon.y - -66;
 
                 // ゴールエリアからの高さを計算
                 const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 260), 0);
@@ -370,7 +370,7 @@
             }
 
             // 宇宙船が画面下に達したかどうかを確認 爆発の位置
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 45) {
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 48) {
                 gameOver(this, 'Mission Failed');
             }
 
