@@ -107,8 +107,8 @@
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
-            this.load.audio('title', 'assets/title.wav'); // ぴー音
-            this.load.audio('start', 'assets/start.wav'); // ビープ音
+            this.load.audio('title', 'assets/title.wav'); // ビープ音
+            this.load.audio('start', 'assets/start.wav'); // ビープ音　未使用
             this.load.audio('goal', 'assets/goal.wav'); // ランディング音
             this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
             this.load.audio('jet', 'assets/jet.wav'); // ジェット音
@@ -132,8 +132,8 @@
 
             // デブリの設定
             this.debrisGroup = this.physics.add.group();
-            for (let i = 0; i < Phaser.Math.Between(6, 10); i++) { // デブリのランダム数
-                const debrisIndex = Phaser.Math.Between(5, 15);
+            for (let i = 0; i < Phaser.Math.Between(6, 12); i++) { // デブリのランダム数
+                const debrisIndex = Phaser.Math.Between(1, 15); // デブリの表示画像数
                 const debris = this.physics.add.sprite(
                     Phaser.Math.Between(0, this.cameras.main.width),
                     Phaser.Math.Between(this.cameras.main.height * 1.5 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置
@@ -142,11 +142,11 @@
 
                 const originalWidth = debris.width;
                 const originalHeight = debris.height;
-                const newWidth = Phaser.Math.Between(20, 45); //デブリのランダムサイズ
+                const newWidth = Phaser.Math.Between(20, 48); //デブリのランダムサイズ
                 const newHeight = (newWidth * originalHeight) / originalWidth;
 
                 debris.setDisplaySize(newWidth, newHeight);
-                debris.setData('speed', Phaser.Math.FloatBetween(-235, 235)); // デブリの左右のスピードをランダム設定
+                debris.setData('speed', Phaser.Math.FloatBetween(-235, 235); // デブリの左右のスピードをランダム設定
                 debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
 
                 this.debrisGroup.add(debris);
@@ -315,7 +315,7 @@
                 this.spaceshipShadow.alpha = shadowAlpha;
 
                 // 影のサイズを計算（高さに応じて50〜100の範囲）
-                const shadowSize = 120 - (heightAboveGoal / 4.55);
+                const shadowSize = 110 - (heightAboveGoal / 4.55);
                 this.spaceshipShadow.displayWidth = shadowSize;
                 this.spaceshipShadow.displayHeight = shadowSize;
             }
