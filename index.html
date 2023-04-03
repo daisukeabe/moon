@@ -173,7 +173,7 @@
             this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5 + 5);
 
             // 宇宙船のスプライトを作成
-            const spaceshipTexture = Phaser.Math.Between(1, 10) === 1 ? 'spacemy' : 'spaceship';
+            const spaceshipTexture = Phaser.Math.Between(1, 20) === 1 ? 'spacemy' : 'spaceship';
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, spaceshipTexture);
             this.spaceship.setCollideWorldBounds(true); // 画面外に出ないように設定
             this.spaceship.setDrag(0); // 慣性の設定
