@@ -3,12 +3,12 @@
 
 <head prefix="og:http://ogp.me/ns#">
     <title>Moonlander</title>
-    <meta name="description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。">
+    <meta name="description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリを避け目標となるフラッグに着陸することが目的です。フラッグ手前の月面に0.5秒止まるとクリアです。">
     <meta charset="utf-8">
     <meta property="og:url" content="https://moon-alpha.vercel.app/" />
     <meta property="og:type" content="product" />
     <meta property="og:title" content="Moonlander" />
-    <meta property="og:description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグに1秒タッチでクリアです。" />
+    <meta property="og:description" content="Moonlanderというゲームを実行します。このゲームでは、プレイヤーが宇宙船を上下左右に操作して、デブリをかわす目標となるフラッグに着陸することが目的です。フラッグ手前の月面に0.5秒止まるとクリアです。" />
     <meta property="og:site_name" content="Moonlander" />
     <meta property="og:image" content="https://moon-alpha.vercel.app/assets/ogp.jpg" />
     <meta name="robots" content="noindex,nofollow">
@@ -337,7 +337,7 @@
             if (Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
                 this.goalTimer += this.game.loop.delta; // タイマーを増加させる
 
-                if (this.goalTimer >= 800) { // タイマーが1000ミリ秒（1秒）以上になったら
+                if (this.goalTimer >= 500) { // タイマーが1000ミリ秒（1秒）以上になったら
                     this.goalTimer = 0; // タイマーをリセットする
                     this.scene.pause(); // 一時停止
                     this.goalSound.play(); // ゴール時に音を再生
