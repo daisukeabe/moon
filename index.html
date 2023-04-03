@@ -311,17 +311,17 @@
 
                 // // 宇宙船の影の位置を更新
                 this.spaceshipShadow.x = this.spaceship.x;
-                this.spaceshipShadow.y = this.moon.y - -76;
+                this.spaceshipShadow.y = this.moon.y - -70;
 
                 // ゴールエリアからの高さを計算
-                const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 280), 0);
+                const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 260), 0);
 
                 // 透明度を計算（高さに応じて0〜1の範囲）
-                const shadowAlpha = heightAboveGoal / 280;
+                const shadowAlpha = heightAboveGoal / 260;
                 this.spaceshipShadow.alpha = shadowAlpha;
 
                 // 影のサイズを計算（高さに応じて50〜100の範囲）
-                const shadowSize = 100 - (heightAboveGoal / 4.55);
+                const shadowSize = 110 - (heightAboveGoal / 4.6);
                 this.spaceshipShadow.displayWidth = shadowSize;
                 this.spaceshipShadow.displayHeight = shadowSize;
             }
