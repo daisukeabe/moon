@@ -134,7 +134,7 @@
 
             // デブリの設定
             this.debrisGroup = this.physics.add.group();
-            for (let i = 0; i < Phaser.Math.Between(5, 12); i++) { // デブリのランダム数
+            for (let i = 0; i < Phaser.Math.Between(5, 10); i++) { // デブリのランダム数
                 const debrisIndex = Phaser.Math.Between(1, 15); // デブリの表示画像数
                 const debris = this.physics.add.sprite(
                     Phaser.Math.Between(0, this.cameras.main.width),
@@ -148,7 +148,7 @@
                 const newHeight = (newWidth * originalHeight) / originalWidth;
 
                 debris.setDisplaySize(newWidth, newHeight);
-                debris.setData('speed', Phaser.Math.FloatBetween(-260, 235)); // デブリの左右のスピードをランダム設定
+                debris.setData('speed', Phaser.Math.FloatBetween(-235, 235)); // デブリの左右のスピードをランダム設定
                 debris.setData('rotationSpeed', Phaser.Math.FloatBetween(-5, 5)); // デブリの左右の回転を設定
 
                 this.debrisGroup.add(debris);
@@ -166,22 +166,14 @@
             this.moon = this.add.sprite(Phaser.Math.Between(200, this.game.config.width - 200), this.game.config.height - 100, 'flag');
             this.physics.add.existing(this.moon, true); // 静的な物体に設定
             this.moon.body.allowGravity = false;
+            // this.moon.displayWidth = 30;
+            // this.moon.displayHeight = 50;
             this.moon.displayWidth = 80;
             this.moon.displayHeight = 70;
-            this.moon.body.setSize(30, 30, false).setOffset(-10, this.moon.displayHeight - 90 ,);
-
-            // // 当たり判定の領域を可視化する赤い矩形を作成
-            // const hitboxGraphics = this.add.graphics();
-            // hitboxGraphics.fillStyle(0xff0000, 0.5);
-            // hitboxGraphics.fillRect(
-            // this.moon.x + this.moon.body.offset.x,
-            // this.moon.y + this.moon.body.offset.y,
-            // this.moon.body.width,
-            // this.moon.body.height
-            // );
+            this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5 + 5);
 
             // 宇宙船のスプライトを作成
-            const spaceshipTexture = Phaser.Math.Between(1, 20) === 1 ? 'spacemy' : 'spaceship';
+            const spaceshipTexture = Phaser.Math.Between(1, 10) === 1 ? 'spacemy' : 'spaceship';
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, spaceshipTexture);
             this.spaceship.setCollideWorldBounds(true); // 画面外に出ないように設定
             this.spaceship.setDrag(0); // 慣性の設定
@@ -190,6 +182,7 @@
             this.spaceship.setGravityY(80);
             this.spaceship.displayWidth = 50;
             this.spaceship.displayHeight = 50;
+            this.spaceship.defaultTextureName = 'spaceship';
 
             // 着陸の影を作成
             this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y - -55, 'spaceshipshadow');
@@ -318,33 +311,33 @@
 
                 // // 宇宙船の影の位置を更新
                 this.spaceshipShadow.x = this.spaceship.x;
-                this.spaceshipShadow.y = this.moon.y - -45;
+                this.spaceshipShadow.y = this.moon.y - -70;
 
                 // ゴールエリアからの高さを計算
-                const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 270), 0);
+                const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 260), 0);
 
                 // 透明度を計算（高さに応じて0〜1の範囲）
-                const shadowAlpha = heightAboveGoal / 270;
+                const shadowAlpha = heightAboveGoal / 260;
                 this.spaceshipShadow.alpha = shadowAlpha;
 
                 // 影のサイズを計算（高さに応じて50〜100の範囲）
-                const shadowSize = 100 - (heightAboveGoal / 4.3);
+                const shadowSize = 110 - (heightAboveGoal / 4.6);
                 this.spaceshipShadow.displayWidth = shadowSize;
                 this.spaceshipShadow.displayHeight = shadowSize;
             }
 
             // 着陸エリアに接触した時にクリア
             const landingZone = new Phaser.Geom.Rectangle(
-                this.moon.x - this.moon.displayWidth / 1,
-                this.moon.y + this.moon.displayHeight / 2 - 29,
+                this.moon.x - this.moon.displayWidth / 2,
+                this.moon.y + this.moon.displayHeight / 2 - 5 + 5,
                 this.moon.displayWidth,
-                1
+                5
             );
 
             if (Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
                 this.goalTimer += this.game.loop.delta; // タイマーを増加させる
 
-                if (this.goalTimer >= 200) { // タイマーが1000ミリ秒（1秒）以上になったら
+                if (this.goalTimer >= 800) { // タイマーが1000ミリ秒（1秒）以上になったら
                     this.goalTimer = 0; // タイマーをリセットする
                     this.scene.pause(); // 一時停止
                     this.goalSound.play(); // ゴール時に音を再生
@@ -377,7 +370,7 @@
             }
 
             // 宇宙船が画面下に達したかどうかを確認 爆発の位置
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 75) {
+            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 45) {
                 gameOver(this, 'Mission Failed');
             }
 
@@ -399,7 +392,7 @@
                 debris.angle += debris.getData('rotationSpeed');
             });
 
-            // // 宇宙船とデブリとの衝突をチェック
+            // 宇宙船とデブリとの衝突をチェック
             this.physics.overlap(this.spaceship, this.debrisGroup, () => {
                 gameOver(this, 'Craaaash!');
             });
