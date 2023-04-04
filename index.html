@@ -21,8 +21,8 @@
     <script>
         const config = {
             type: Phaser.AUTO,
-            width: 1200,
-            height: 800,
+            width: 1800,
+            height: 900,
             physics: {
                 default: 'arcade',
                 arcade: {
@@ -46,7 +46,7 @@
 
         function showTitle(scene) {
             const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
-            title.setDisplaySize(800, 500);
+            title.setDisplaySize(800, 500); // タイトル画像のサイズ
             title.setInteractive();
 
             scene.spaceshipShadow.setAlpha(0);
@@ -101,7 +101,7 @@
 
 
         function preload() {
-            this.load.image('background', 'assets/background.png');
+            this.load.image('background', 'assets/background.jpg');
             this.load.image('spaceship', 'assets/spaceship.png');
             this.load.image('spacemy', 'assets/spacemy.png');
             this.load.image('spaceman', 'assets/spaceman.png');
@@ -128,8 +128,18 @@
 
             this.add.image(0, 0, 'background').setOrigin(0, 0);
 
-            this.physics.world.gravity.y = 0; // 全体の重力値を設定
+            // 背景画像の幅と高さを取得
+            const backgroundImage = this.textures.get('background').getSourceImage();
+            const imageWidth = backgroundImage.width;
+            const imageHeight = backgroundImage.height;
 
+            // シーンの幅と高さを取得
+            const sceneWidth = this.scale.width;
+            const sceneHeight = this.scale.height;
+
+            // 背景画像をシーンの中心に配置
+            this.add.image(sceneWidth / 2, sceneHeight / 2, 'background').setDisplaySize(imageWidth, imageHeight);
+            this.physics.world.gravity.y = 0; // 全体の重力値を設定
             this.fuel = 250; // 燃料の最大値を設定
 
             // デブリの設定
@@ -137,7 +147,7 @@
             for (let i = 0; i < Phaser.Math.Between(5, 10); i++) { // デブリのランダム数
                 const debrisIndex = Phaser.Math.Between(1, 15); // デブリの表示画像数
                 const debris = this.physics.add.sprite(
-                    Phaser.Math.Between(0, this.cameras.main.width),
+                    Phaser.Math.Between(0, 2000), // デブリの表示位置の X 座標を 0 から 1400 の範囲に変更
                     Phaser.Math.Between(this.cameras.main.height * 1.5 / 5, this.cameras.main.height * 4 / 5), // デブリの表示位置
                     `debris${debrisIndex}`
                 );
@@ -163,11 +173,11 @@
             this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
 
             // 着陸エリアのスプライトを作成
-            this.moon = this.add.sprite(Phaser.Math.Between(200, this.game.config.width - 200), this.game.config.height - 100, 'flag');
-            this.physics.add.existing(this.moon, true); // 静的な物体に設定
+            const landingAreaWidth = this.game.config.width / 5;
+            const landingAreaStartX = (this.game.config.width - landingAreaWidth) / 3;
+            this.moon = this.add.sprite(Phaser.Math.Between(landingAreaStartX, landingAreaStartX + landingAreaWidth), this.game.config.height - 100, 'flag');
+            this.physics.add.existing(this.moon, true);
             this.moon.body.allowGravity = false;
-            // this.moon.displayWidth = 30;
-            // this.moon.displayHeight = 50;
             this.moon.displayWidth = 80;
             this.moon.displayHeight = 70;
             this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5 + 5);
@@ -223,29 +233,42 @@
                 v.addEventListener('touchend', () => this.cursors[arrows[i]].isDown = false);
             })
 
+            // カメラの初期位置とズームを設定
+            this.cameras.main.centerOn(this.spaceship.x, this.spaceship.y);
+            this.cameras.main.setZoom(1.83);
+
             showTitle(this);
         }
 
-        function update() {
+        function update(time, delta) {
             if (!gameStarted) {
                 this.spaceship.setVelocity(0);
                 this.spaceship.setAcceleration(0);
                 return;
             }
 
-            // ゲームが開始されていない場合は処理をスキップ
-            if (!gameStarted) {
-                return;
-            }
-
-            // 宇宙船の速度に基づいてカメラの位置を調整（パララックス効果）
-            const maxCameraOffset = 100;
-            const offsetX = Phaser.Math.Clamp(-this.spaceship.body.velocity.x / 50, -maxCameraOffset, maxCameraOffset);
-            const offsetY = Phaser.Math.Clamp(-this.spaceship.body.velocity.y / 50, -maxCameraOffset, maxCameraOffset);
-            this.cameras.main.scrollX = offsetX;
-            this.cameras.main.scrollY = offsetY;
-
             if (gameStarted) {
+                // 宇宙船の速度に基づいてカメラの位置を調整（パララックス効果）
+                const maxCameraOffset = 100;
+                const offsetX = Phaser.Math.Clamp(-this.spaceship.body.velocity.x / 50, -maxCameraOffset, maxCameraOffset);
+                const offsetY = Phaser.Math.Clamp(-this.spaceship.body.velocity.y / 50, -maxCameraOffset, maxCameraOffset);
+
+                // カメラの位置とズームを宇宙船に追従させる
+                this.cameras.main.centerOn(this.spaceship.x + offsetX, this.spaceship.y + offsetY);
+
+                // ズーム効果を設定
+                const zoomSpeed = 0.0003 * delta;
+                const lowerThirdBoundary = this.game.config.height * (2 / 3);
+                let zoomTarget;
+
+                if (this.spaceship.y > lowerThirdBoundary) {
+                    zoomTarget = 1.9;
+                } else {
+                    zoomTarget = 1;
+                }
+
+                this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, zoomTarget, zoomSpeed));
+
                 // ジェット音の再生タイミング
                 if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
                     if (!jetSound.isPlaying) {
@@ -393,9 +416,9 @@
             });
 
             // 宇宙船とデブリとの衝突をチェック
-            this.physics.overlap(this.spaceship, this.debrisGroup, () => {
-                gameOver(this, 'Craaaash!');
-            });
+            // this.physics.overlap(this.spaceship, this.debrisGroup, () => {
+            //     gameOver(this, 'Craaaash!');
+            // });
 
         }
 

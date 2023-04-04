@@ -2,7 +2,7 @@ html,
 body {
     width: 100%;
     height: 100%;
-    background-color: black;
+    background-color: #030304;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -19,7 +19,9 @@ body {
 
 canvas {
     display: block;
-    margin-top: 20px;
+    margin-top: 30px;
+    max-width: 1200px;
+    max-height: 800px;
 }
 
 
