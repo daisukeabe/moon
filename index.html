@@ -21,7 +21,7 @@
     <script>
         const config = {
             type: Phaser.AUTO,
-            width: 1800,
+            width: 1400,
             height: 900,
             physics: {
                 default: 'arcade',
@@ -48,6 +48,10 @@
             const title = scene.add.image(scene.game.config.width / 2, scene.game.config.height / 2, 'title');
             title.setDisplaySize(800, 500); // タイトル画像のサイズ
             title.setInteractive();
+
+            // タイトル画像をカメラに固定
+            title.setScrollFactor(0);
+
 
             scene.spaceshipShadow.setAlpha(0);
 
@@ -83,7 +87,6 @@
             });
         }
 
-
         function restartGame(scene) {
             gameStarted = false;
             scene.spaceship.setVisible(true);
@@ -98,7 +101,6 @@
             // 燃料ゲージをリセット
             scene.fuel = 200; // 燃料を最大値に戻す
         }
-
 
         function preload() {
             this.load.image('background', 'assets/background.jpg');
@@ -172,6 +174,7 @@
             this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
             this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
 
+
             // 着陸エリアのスプライトを作成
             const landingAreaWidth = this.game.config.width / 5;
             const landingAreaStartX = (this.game.config.width - landingAreaWidth) / 3;
@@ -235,7 +238,12 @@
 
             // カメラの初期位置とズームを設定
             this.cameras.main.centerOn(this.spaceship.x, this.spaceship.y);
-            this.cameras.main.setZoom(1.83);
+            this.cameras.main.setZoom(1.2);
+
+            // カメラのズームが変更されたときにタイトル画像のスケールを調整するリスナーを追加
+            this.cameras.main.addListener('zoomchange', (cam, newZoom) => {
+                title.setScale(1 / newZoom);
+            });
 
             showTitle(this);
         }
@@ -262,9 +270,9 @@
                 let zoomTarget;
 
                 if (this.spaceship.y > lowerThirdBoundary) {
-                    zoomTarget = 1.9;
+                    zoomTarget = 1.8;
                 } else {
-                    zoomTarget = 1;
+                    zoomTarget = 0.8;
                 }
 
                 this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, zoomTarget, zoomSpeed));
@@ -378,7 +386,7 @@
                         this.spaceship.setAccelerationY(0);
                         this.spaceship.setGravityY(0);
 
-                        // 空き音を停止
+                        // エンプティー音を停止
                         if (this.emptySound.isPlaying) {
                             this.emptySound.stop();
                         }
@@ -392,7 +400,7 @@
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
             }
 
-            // 宇宙船が画面下に達したかどうかを確認 爆発の位置
+            // 宇宙船が画面下に達したかどうかを確認 爆発判定の位置
             if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 48) {
                 gameOver(this, 'Mission Failed');
             }
@@ -471,7 +479,7 @@
                     scene.scene.restart();
                 }, 3000);
 
-                // 爆発時にempty音を停止
+                // 爆発時にエンプティー音を停止
                 if (scene.emptySound.isPlaying) {
                     scene.emptySound.stop();
                 }
@@ -481,7 +489,6 @@
 
     </script>
 
-
     <div class="button-container">
         <div class="button-row">
             <div class="button" id="left">　◁　</div>
@@ -490,16 +497,6 @@
             <div class="button" id="down">　▽　</div>
         </div>
     </div>
-
-    <!-- 追加要素
-
-        ・ブラックホール障害：
-            表示場所は画面上半分の位置にランダムで縦横40pxサイズ。
-            強い重力が中心にあり宇宙船が吸い込まれる。
-            ぶつかると宇宙船が徐々に小さくなって高速移動エフェクトを入れてワープする。
-            ワープエフェクトが終了すると https://mypong-phi.vercel.app/ に遷移する。
-
-    -->
 
 </body>
 
