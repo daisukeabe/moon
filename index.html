@@ -166,18 +166,28 @@
                 this.debrisGroup.add(debris);
             }
 
+            // // 燃料ゲージの枠を作成
+            // this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
+            // this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
+
+            // // 燃料ゲージを作成
+            // this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
+            // this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
+
             // 燃料ゲージの枠を作成
             this.fuelGaugeBorder = this.add.graphics({ lineStyle: { width: 2, color: 0xFFFFFF }, fillStyle: { color: 0xFFFFFF } });
             this.fuelGaugeBorder.strokeRect(this.game.config.width / 2 - 125, this.game.config.height - 40, 250, 20);
+            this.fuelGaugeBorder.setScrollFactor(0); // スクロールファクターを0に設定
 
             // 燃料ゲージを作成
             this.fuelGauge = this.add.graphics({ fillStyle: { color: 0xaf3035 } });
             this.fuelGauge.fillRect(this.game.config.width / 2 - 124, this.game.config.height - 38, 247, 16);
+            this.fuelGauge.setScrollFactor(0); // スクロールファクターを0に設定
 
 
             // 着陸エリアのスプライトを作成
             const landingAreaWidth = this.game.config.width / 5;
-            const landingAreaStartX = (this.game.config.width - landingAreaWidth) / 3;
+            const landingAreaStartX = (this.game.config.width - landingAreaWidth) / 4;
             this.moon = this.add.sprite(Phaser.Math.Between(landingAreaStartX, landingAreaStartX + landingAreaWidth), this.game.config.height - 100, 'flag');
             this.physics.add.existing(this.moon, true);
             this.moon.body.allowGravity = false;
@@ -268,15 +278,27 @@
                 const zoomSpeed = 0.0003 * delta;
                 const lowerThirdBoundary = this.game.config.height * (2 / 3);
                 let zoomTarget;
+                let fuelGaugeZoomTarget; // 燃料ゲージのズームターゲットを追加
+                let fuelGaugeBorderZoomTarget // 燃料ゲージ枠のズームターゲットを追加
 
                 if (this.spaceship.y > lowerThirdBoundary) {
                     zoomTarget = 1.8;
+                    fuelGaugeZoomTarget = 0.8; // 燃料ゲージのズームターゲットを設定
+                    fuelGaugeBorderZoomTarget = 0.8; // 燃料ゲージ枠のズームターゲットを設定
                 } else {
                     zoomTarget = 0.8;
+                    fuelGaugeZoomTarget = 0.8; // 燃料ゲージのズームターゲットを設定（画面全体より小さく）
+                    fuelGaugeBorderZoomTarget = 0.8; // 燃料ゲージ枠のズームターゲットを設定（画面全体より小さく）
                 }
 
                 this.cameras.main.setZoom(Phaser.Math.Linear(this.cameras.main.zoom, zoomTarget, zoomSpeed));
 
+                // 燃料ゲージのズームを設定
+                this.fuelGauge.setScale(Phaser.Math.Linear(this.fuelGauge.scaleX, fuelGaugeZoomTarget, zoomSpeed));
+                // 燃料ゲージ枠のズームを設定
+                this.fuelGaugeBorder.setScale(Phaser.Math.Linear(this.fuelGaugeBorder.scaleX, fuelGaugeBorderZoomTarget, zoomSpeed));
+
+                
                 // ジェット音の再生タイミング
                 if (cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown) {
                     if (!jetSound.isPlaying) {
@@ -470,9 +492,9 @@
                     scene.scene.pause();
                 }, 3000); // 3000ミリ秒（3秒）後に実行
 
-                setTimeout(() => {
-                    resetGame(scene);
-                }, 3000);
+                // setTimeout(() => {
+                //     resetGame(scene);
+                // }, 3000);
 
                 gameStarted = false; // ゲームが開始されていない状態に戻す
                 setTimeout(() => {
