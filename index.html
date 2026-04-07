@@ -219,6 +219,32 @@
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
+            // ジェット噴射用パーティクルテクスチャを生成
+            const jetGfx = this.make.graphics({ add: false });
+            jetGfx.fillStyle(0xffffff);
+            jetGfx.fillCircle(3, 3, 3);
+            jetGfx.generateTexture('jetParticle', 6, 6);
+            jetGfx.destroy();
+
+            // ジェット噴射パーティクルエミッター（方向ごと）
+            const emitterConfig = (angle) => ({
+                speed: { min: 60, max: 140 },
+                angle: angle,
+                scale: { start: 0.5, end: 0 },
+                alpha: { start: 0.7, end: 0 },
+                lifespan: 200,
+                frequency: 25,
+                quantity: 2,
+                on: false
+            });
+
+            this.jetParticles = {
+                up: this.add.particles('jetParticle').createEmitter(emitterConfig({ min: 75, max: 105 })),
+                down: this.add.particles('jetParticle').createEmitter(emitterConfig({ min: 255, max: 285 })),
+                left: this.add.particles('jetParticle').createEmitter(emitterConfig({ min: -15, max: 15 })),
+                right: this.add.particles('jetParticle').createEmitter(emitterConfig({ min: 165, max: 195 }))
+            };
+
             // 爆発アニメーションの作成
             this.anims.create({
                 key: 'explode',
@@ -354,10 +380,10 @@
 
                 if (this.cursors.left.isDown) {
                     this.spaceship.setAccelerationX(-500);
-                    this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大45度傾ける
+                    this.spaceship.angle = Math.max(this.spaceship.angle - 2, -35); // 左へ最大35度傾ける
                 } else if (this.cursors.right.isDown) {
                     this.spaceship.setAccelerationX(500);
-                    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大45度傾ける
+                    this.spaceship.angle = Math.min(this.spaceship.angle + 2, 35); // 右へ最大35度傾ける
                 } else {
                     this.spaceship.setAccelerationX(0);
                     // 宇宙船の角度を徐々に0度に戻す
@@ -367,6 +393,21 @@
                         this.spaceship.angle = Math.max(this.spaceship.angle - 2, 0);
                     }
                 }
+
+                // ジェット噴射パーティクルの位置更新とon/off
+                const sx = this.spaceship.x;
+                const sy = this.spaceship.y;
+                const hasFuel = this.fuel > 0;
+
+                this.jetParticles.up.setPosition(sx, sy + 25);
+                this.jetParticles.down.setPosition(sx, sy - 25);
+                this.jetParticles.left.setPosition(sx + 25, sy);
+                this.jetParticles.right.setPosition(sx - 25, sy);
+
+                this.jetParticles.up.on = this.cursors.up.isDown && hasFuel;
+                this.jetParticles.down.on = this.cursors.down.isDown && hasFuel;
+                this.jetParticles.left.on = this.cursors.left.isDown && hasFuel;
+                this.jetParticles.right.on = this.cursors.right.isDown && hasFuel;
 
                 // // 宇宙船の影の位置を更新
                 this.spaceshipShadow.x = this.spaceship.x;
