@@ -172,6 +172,25 @@
             this.moon.displayHeight = 70;
             this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5 + 5);
 
+            // ゴール地面の的（楕円＋十字線）を作成して点滅させる
+            const markerX = this.moon.x + 6;
+            const markerY = this.moon.y + this.moon.displayHeight / 2 + 5;
+            this.landingMarker = this.add.graphics({ lineStyle: { width: 1, color: 0x00ff00 } });
+            // 楕円
+            this.landingMarker.strokeEllipse(markerX, markerY, 60, 16);
+            this.landingMarker.strokeEllipse(markerX, markerY, 35, 10);
+            // 十字線
+            this.landingMarker.lineBetween(markerX - 35, markerY, markerX + 35, markerY);
+            this.landingMarker.lineBetween(markerX, markerY - 10, markerX, markerY + 10);
+            this.tweens.add({
+                targets: this.landingMarker,
+                alpha: 0.2,
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut'
+            });
+
             // 宇宙船のスプライトを作成
             const spaceshipTexture = Phaser.Math.Between(1, 20) === 1 ? 'spacemy' : 'spaceship';
             this.spaceship = this.physics.add.sprite(this.game.config.width / 2, 150, spaceshipTexture);
@@ -374,7 +393,8 @@
                 5
             );
 
-            if (Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
+            const isLevel = Math.abs(this.spaceship.angle) <= 5; // 水平から±5度以内
+            if (isLevel && Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
                 this.goalTimer += this.game.loop.delta; // タイマーを増加させる
 
                 if (this.goalTimer >= 500) { // タイマーが1000ミリ秒（1秒）以上になったら
