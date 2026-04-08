@@ -165,7 +165,7 @@
 
 
             // 着陸エリアのスプライトを作成
-            this.moon = this.add.sprite(Phaser.Math.Between(100, this.game.config.width - 100), this.game.config.height - 100, 'flag');
+            this.moon = this.add.sprite(Phaser.Math.Between(100, this.game.config.width - 100), this.game.config.height - 98, 'flag');
             this.physics.add.existing(this.moon, true);
             this.moon.body.allowGravity = false;
             this.moon.displayWidth = 80;
@@ -205,7 +205,7 @@
             this.spaceship.defaultTextureName = 'spaceship';
 
             // 着陸の影を作成
-            this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y - -55, 'spaceshipshadow');
+            this.spaceshipShadow = this.add.image(this.spaceship.x, this.moon.y + 47, 'spaceshipshadow');
             this.spaceshipShadow.displayWidth = 50; // 宇宙船と同じサイズに設定
             this.spaceshipShadow.displayHeight = 50; // 宇宙船と同じサイズに設定
 
@@ -225,6 +225,25 @@
             jetGfx.fillCircle(3, 3, 3);
             jetGfx.generateTexture('jetParticle', 6, 6);
             jetGfx.destroy();
+
+            // 粉塵パーティクル用テクスチャ（薄いベージュの丸）
+            const dustGfx = this.make.graphics({ add: false });
+            dustGfx.fillStyle(0xc8b89a);
+            dustGfx.fillCircle(3, 3, 3);
+            dustGfx.generateTexture('dustParticle', 6, 6);
+            dustGfx.destroy();
+
+            // 粉塵パーティクルエミッター（地面付近で左右に舞い上がる）
+            this.dustEmitter = this.add.particles('dustParticle').createEmitter({
+                speed: { min: 20, max: 60 },
+                angle: { min: 240, max: 300 },
+                scale: { start: 0.6, end: 0 },
+                alpha: { start: 0.4, end: 0 },
+                lifespan: { min: 400, max: 800 },
+                frequency: 30,
+                quantity: 2,
+                on: false
+            });
 
             // ジェット噴射パーティクルエミッター（方向ごと）
             const emitterConfig = (angle) => ({
@@ -409,9 +428,9 @@
                 this.jetParticles.left.on = this.cursors.left.isDown && hasFuel;
                 this.jetParticles.right.on = this.cursors.right.isDown && hasFuel;
 
-                // // 宇宙船の影の位置を更新
+                // 宇宙船の影の位置を更新（宇宙船の真下、地面の高さ）
                 this.spaceshipShadow.x = this.spaceship.x;
-                this.spaceshipShadow.y = this.moon.y - -66;
+                this.spaceshipShadow.y = this.moon.y + 58;
 
                 // ゴールエリアからの高さを計算
                 const heightAboveGoal = Math.max(this.spaceship.y - (this.moon.y - 260), 0);
@@ -424,6 +443,17 @@
                 const shadowSize = 110 - (heightAboveGoal / 4.6);
                 this.spaceshipShadow.displayWidth = shadowSize;
                 this.spaceshipShadow.displayHeight = shadowSize;
+
+                // 地面に近い＋ジェット噴射中の時だけ粉塵を舞い上がらせる
+                const groundDistance = (this.game.config.height - 63) - (this.spaceship.y + 25);
+                const isThrusting = this.cursors.up.isDown || this.cursors.down.isDown || this.cursors.left.isDown || this.cursors.right.isDown;
+                if (groundDistance < 150 && groundDistance > 0 && isThrusting && this.fuel > 0) {
+                    this.dustEmitter.setPosition(this.spaceship.x, this.game.config.height - 55);
+                    this.dustEmitter.on = true;
+                    this.dustEmitter.setFrequency(Math.max(10, groundDistance / 5));
+                } else {
+                    this.dustEmitter.on = false;
+                }
             }
 
             // 着陸エリアに接触した時にクリア
@@ -435,43 +465,50 @@
             );
 
             const isLevel = Math.abs(this.spaceship.angle) <= 5; // 水平から±5度以内
-            if (isLevel && Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
-                this.goalTimer += this.game.loop.delta; // タイマーを増加させる
+            const speed = Math.sqrt(
+                this.spaceship.body.velocity.x * this.spaceship.body.velocity.x +
+                this.spaceship.body.velocity.y * this.spaceship.body.velocity.y
+            );
+            const isSlow = speed < 80; // ゆっくり降下中のみ
 
-                if (this.goalTimer >= 500) { // タイマーが1000ミリ秒（1秒）以上になったら
-                    this.goalTimer = 0; // タイマーをリセットする
-                    this.scene.pause(); // 一時停止
-                    this.goalSound.play(); // ゴール時に音を再生
-                    this.add.text(this.spaceship.x, this.spaceship.y - 50, 'Good Landing', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5).setDepth(11);
+            if (isLevel && isSlow && Phaser.Geom.Intersects.RectangleToRectangle(this.spaceship.getBounds(), landingZone)) {
+                // コトンと着地：即座に停止して接地感を出す
+                this.spaceship.setVelocity(0);
+                this.spaceship.setAcceleration(0);
+                this.spaceship.setGravityY(0);
+                this.spaceship.angle = 0;
 
-                    // ゴール時にjet音を停止
-                    if (jetSound.isPlaying) {
-                        jetSound.stop();
-                    }
+                this.goalSound.play();
+                this.add.text(this.spaceship.x, this.spaceship.y - 50, 'Good Landing', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5).setDepth(11);
 
-                    setTimeout(() => {
-                        this.spaceship.setVelocityX(0);
-                        this.spaceship.setVelocityY(0);
-                        this.spaceship.setAccelerationX(0);
-                        this.spaceship.setAccelerationY(0);
-                        this.spaceship.setGravityY(0);
-
-                        // エンプティー音を停止
-                        if (this.emptySound.isPlaying) {
-                            this.emptySound.stop();
-                        }
-
-                        setTimeout(() => {
-                            restartGame(this);
-                        }, 2000);
-                    }, 2000);
+                // ゴール時にjet音を停止
+                if (jetSound.isPlaying) {
+                    jetSound.stop();
                 }
+
+                // エンプティー音を停止
+                if (this.emptySound.isPlaying) {
+                    this.emptySound.stop();
+                }
+
+                // ジェット噴射・粉塵パーティクルを停止
+                this.jetParticles.up.on = false;
+                this.jetParticles.down.on = false;
+                this.jetParticles.left.on = false;
+                this.jetParticles.right.on = false;
+                this.dustEmitter.on = false;
+
+                gameStarted = false; // 操作を無効化
+
+                this.time.delayedCall(3000, () => {
+                    restartGame(this);
+                });
             } else {
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
             }
 
-            // 宇宙船が画面下に達したかどうかを確認 爆発判定の位置
-            if (this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 48) {
+            // 宇宙船が画面下に達したかどうかを確認 爆発判定の位置（ゴール成功時は除外）
+            if (gameStarted && this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 63) {
                 gameOver(this, 'Mission Failed');
             }
 
@@ -522,6 +559,13 @@
 
                 // 爆発音を再生
                 scene.explosionSound.play();
+
+                // ジェット噴射・粉塵パーティクルを停止
+                scene.jetParticles.up.on = false;
+                scene.jetParticles.down.on = false;
+                scene.jetParticles.left.on = false;
+                scene.jetParticles.right.on = false;
+                scene.dustEmitter.on = false;
 
                 // 宇宙船を非表示にする
                 scene.spaceship.setVisible(false);
