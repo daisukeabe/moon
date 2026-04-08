@@ -233,16 +233,34 @@
             dustGfx.generateTexture('dustParticle', 6, 6);
             dustGfx.destroy();
 
-            // 粉塵パーティクルエミッター（地面付近で左右に舞い上がる）
-            this.dustEmitter = this.add.particles('dustParticle').createEmitter({
-                speed: { min: 20, max: 60 },
-                angle: { min: 240, max: 300 },
-                scale: { start: 0.6, end: 0 },
-                alpha: { start: 0.4, end: 0 },
-                lifespan: { min: 400, max: 800 },
-                frequency: 30,
-                quantity: 2,
-                on: false
+            // 粉塵パーティクル用テクスチャ（大きめの煙）
+            const dustGfxLarge = this.make.graphics({ add: false });
+            dustGfxLarge.fillStyle(0xa8a8a8);
+            dustGfxLarge.fillCircle(8, 8, 8);
+            dustGfxLarge.generateTexture('dustLarge', 16, 16);
+            dustGfxLarge.destroy();
+
+            // 粉塵パーティクルエミッター（中央・左・右から舞い上がる煙）
+            const dustParticles = this.add.particles('dustLarge');
+
+            // 粉塵エミッター5つ（左→左中→中央→右中→右）
+            const dustAngles = [
+                { min: 190, max: 220 },  // 左
+                { min: 230, max: 260 },  // 左中
+                { min: 280, max: 310 },  // 右中
+                { min: 320, max: 350 },  // 右
+            ];
+            this.dustEmitters = dustAngles.map(angle => {
+                return dustParticles.createEmitter({
+                    speed: { min: 30, max: 80 },
+                    angle: angle,
+                    scale: { start: 0.2, end: 1.8 },
+                    alpha: { start: 0.4, end: 0 },
+                    lifespan: { min: 600, max: 1300 },
+                    frequency: 20,
+                    quantity: 2,
+                    on: false
+                });
             });
 
             // ジェット噴射パーティクルエミッター（方向ごと）
@@ -444,15 +462,26 @@
                 this.spaceshipShadow.displayWidth = shadowSize;
                 this.spaceshipShadow.displayHeight = shadowSize;
 
-                // 地面に近い＋ジェット噴射中の時だけ粉塵を舞い上がらせる
+                // 地面に近い＋ジェット噴射中の時だけ粉塵を左右に舞い上がらせる
                 const groundDistance = (this.game.config.height - 63) - (this.spaceship.y + 25);
                 const isThrusting = this.cursors.up.isDown || this.cursors.down.isDown || this.cursors.left.isDown || this.cursors.right.isDown;
                 if (groundDistance < 150 && groundDistance > 0 && isThrusting && this.fuel > 0) {
-                    this.dustEmitter.setPosition(this.spaceship.x, this.game.config.height - 55);
-                    this.dustEmitter.on = true;
-                    this.dustEmitter.setFrequency(Math.max(10, groundDistance / 5));
+                    const dustY = this.game.config.height - 65;
+                    const intensity = 1 - (groundDistance / 150); // 0(遠い)〜1(地面すれすれ)
+                    const freq = Math.max(5, 30 - intensity * 25);
+                    const qty = Math.ceil(1 + intensity * 3);
+                    const spd = 30 + intensity * 80;
+
+                    const offsets = [-8, -3, 3, 8];
+                    this.dustEmitters.forEach((e, i) => {
+                        e.setPosition(this.spaceship.x + offsets[i], dustY);
+                        e.on = true;
+                        e.setFrequency(freq);
+                        e.setQuantity(qty);
+                        e.setSpeed({ min: spd * 0.5, max: spd });
+                    });
                 } else {
-                    this.dustEmitter.on = false;
+                    this.dustEmitters.forEach(e => e.on = false);
                 }
             }
 
@@ -496,7 +525,7 @@
                 this.jetParticles.down.on = false;
                 this.jetParticles.left.on = false;
                 this.jetParticles.right.on = false;
-                this.dustEmitter.on = false;
+                this.dustEmitters.forEach(e => e.on = false);
 
                 gameStarted = false; // 操作を無効化
 
@@ -565,7 +594,7 @@
                 scene.jetParticles.down.on = false;
                 scene.jetParticles.left.on = false;
                 scene.jetParticles.right.on = false;
-                scene.dustEmitter.on = false;
+                scene.dustEmitters.forEach(e => e.on = false);
 
                 // 宇宙船を非表示にする
                 scene.spaceship.setVisible(false);
