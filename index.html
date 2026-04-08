@@ -82,7 +82,6 @@
             scene.spaceship.setAcceleration(0);
             scene.spaceship.setGravityY(80);
             scene.scene.resume(); // ゲームシーンを再開
-            scene.startSound.stop();
             scene.scene.restart();
 
             // 燃料ゲージをリセット
@@ -99,11 +98,11 @@
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
             this.load.audio('title', 'assets/title.wav'); // ビープ音
-            this.load.audio('start', 'assets/start.wav'); // ビープ音　未使用
             this.load.audio('goal', 'assets/goal.wav'); // ランディング音
             this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
             this.load.audio('jet', 'assets/jet.wav'); // ジェット音
             this.load.audio('empty', 'assets/empty.wav'); // エンプティー音
+            this.load.audio('end', 'assets/end.wav'); // ミッション失敗音
 
             for (let i = 1; i <= 15; i++) {
                 const paddedIndex = i.toString().padStart(2, '0');
@@ -112,6 +111,17 @@
         }
 
         function create() {
+            // 的マーカーの描画ヘルパー
+            this.drawLandingMarker = (color) => {
+                this.landingMarker.clear();
+                this.landingMarker.lineStyle(1, color);
+                this.landingMarker.strokeEllipse(this.markerX, this.markerY, 60, 16);
+                this.landingMarker.strokeEllipse(this.markerX, this.markerY, 35, 10);
+                this.landingMarker.lineBetween(this.markerX - 35, this.markerY, this.markerX + 35, this.markerY);
+                this.landingMarker.lineBetween(this.markerX, this.markerY - 10, this.markerX, this.markerY + 10);
+            };
+            this.currentMarkerColor = 0x00ff00;
+
             // キーボード入力の設定
             const enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
 
@@ -173,15 +183,10 @@
             this.moon.body.setSize(30, 5, false).setOffset(0, this.moon.displayHeight - 5 + 5);
 
             // ゴール地面の的（楕円＋十字線）を作成して点滅させる
-            const markerX = this.moon.x + 6;
-            const markerY = this.moon.y + this.moon.displayHeight / 2 + 5;
-            this.landingMarker = this.add.graphics({ lineStyle: { width: 1, color: 0x00ff00 } });
-            // 楕円
-            this.landingMarker.strokeEllipse(markerX, markerY, 60, 16);
-            this.landingMarker.strokeEllipse(markerX, markerY, 35, 10);
-            // 十字線
-            this.landingMarker.lineBetween(markerX - 35, markerY, markerX + 35, markerY);
-            this.landingMarker.lineBetween(markerX, markerY - 10, markerX, markerY + 10);
+            this.markerX = this.moon.x + 6;
+            this.markerY = this.moon.y + this.moon.displayHeight / 2 + 5;
+            this.landingMarker = this.add.graphics();
+            this.drawLandingMarker(0x00ff00);
             this.tweens.add({
                 targets: this.landingMarker,
                 alpha: 0.2,
@@ -213,11 +218,11 @@
 
             this.cursors = this.input.keyboard.createCursorKeys();
             this.titleSound = this.sound.add('title', { loop: false, volume: 0.05 });
-            this.startSound = this.sound.add('start', { loop: true, volume: 0.05 });
             this.goalSound = this.sound.add('goal', { loop: false, volume: 0.05 });
             this.goalTimer = 0;
             this.explosionSound = this.sound.add('explosion', { loop: false, volume: 1 });
             this.emptySound = this.sound.add('empty', { loop: true, volume: 0.1 });
+            this.endSound = this.sound.add('end', { loop: false, volume: 0.3 });
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
@@ -495,6 +500,25 @@
                 5
             );
 
+            // ターゲットマークの色フェード（ゴール上空に近づくほど緑→オレンジ）
+            const inGoalX = Math.abs(this.spaceship.x - this.moon.x) < this.moon.displayWidth / 2;
+            const distY = this.moon.y - this.spaceship.y;
+            let markerT = 0; // 0=緑, 1=オレンジ
+            if (inGoalX && distY < 300 && distY > 0) {
+                markerT = 1 - (distY / 300); // 近いほど1に
+            } else if (inGoalX && distY <= 0) {
+                markerT = 1;
+            }
+            // 緑(0x00ff00)→オレンジ(0xff8800)を補間
+            const r = Math.round(0x00 + (0xff - 0x00) * markerT);
+            const g = Math.round(0xff + (0x88 - 0xff) * markerT);
+            const b = Math.round(0x00 + (0x00 - 0x00) * markerT);
+            const newColor = (r << 16) | (g << 8) | b;
+            if (newColor !== this.currentMarkerColor) {
+                this.currentMarkerColor = newColor;
+                this.drawLandingMarker(newColor);
+            }
+
             const isLevel = Math.abs(this.spaceship.angle) <= 5; // 水平から±5度以内
             const speed = Math.sqrt(
                 this.spaceship.body.velocity.x * this.spaceship.body.velocity.x +
@@ -538,9 +562,40 @@
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
             }
 
-            // 宇宙船が画面下に達したかどうかを確認 爆発判定の位置（ゴール成功時は除外）
+            // 宇宙船が地面に達したかどうかを確認（ゴール成功時は除外）
             if (gameStarted && this.spaceship.y + this.spaceship.displayHeight / 2 >= this.game.config.height - 63) {
-                gameOver(this, 'Mission Failed');
+                const groundSpeed = Math.sqrt(
+                    this.spaceship.body.velocity.x * this.spaceship.body.velocity.x +
+                    this.spaceship.body.velocity.y * this.spaceship.body.velocity.y
+                );
+                const groundLevel = Math.abs(this.spaceship.angle) <= 5;
+
+                if (groundLevel && groundSpeed < 80) {
+                    // ゆっくり水平着地：爆発せずコトンと停止、ミッション失敗
+                    this.spaceship.setVelocity(0);
+                    this.spaceship.setAcceleration(0);
+                    this.spaceship.setGravityY(0);
+                    this.spaceship.angle = 0;
+
+                    if (jetSound.isPlaying) { jetSound.stop(); }
+                    if (this.emptySound.isPlaying) { this.emptySound.stop(); }
+                    this.jetParticles.up.on = false;
+                    this.jetParticles.down.on = false;
+                    this.jetParticles.left.on = false;
+                    this.jetParticles.right.on = false;
+                    this.dustEmitters.forEach(e => e.on = false);
+
+                    this.add.text(this.spaceship.x, this.spaceship.y - 50, 'Mission Failed', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5).setDepth(11);
+                    this.endSound.play();
+                    gameStarted = false;
+
+                    this.time.delayedCall(3000, () => {
+                        restartGame(this);
+                    });
+                } else {
+                    // 速すぎるor傾いている：爆発
+                    gameOver(this, 'Mission Failed');
+                }
             }
 
             // デブリの移動
@@ -581,7 +636,6 @@
 
             if (!explosionPlaying) {
                 explosionPlaying = true;
-                scene.startSound.stop(); // 爆発時にビープ音を停止
 
                 // 爆発アニメーションを作成して再生
                 const explosion = scene.add.sprite(scene.spaceship.x, scene.spaceship.y, 'explosion');
