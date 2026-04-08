@@ -476,15 +476,18 @@
             }
 
             // デブリの移動
+            const cam = this.cameras.main;
+            const camLeft = cam.scrollX;
+            const camRight = cam.scrollX + cam.width / cam.zoom;
             this.debrisGroup.getChildren().forEach((debris) => {
                 debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
 
-                // 画面の端に達したら反対側に折り返す
-                const newDebrisWidth = debris.displayWidth;
-                if (debris.x > this.cameras.main.width + newDebrisWidth / 2) {
-                    debris.x = -newDebrisWidth / 2;
-                } else if (debris.x < -newDebrisWidth / 2) {
-                    debris.x = this.cameras.main.width + newDebrisWidth / 2;
+                // カメラの表示範囲の端から端へ折り返す
+                const margin = debris.displayWidth;
+                if (debris.x > camRight + margin) {
+                    debris.x = camLeft - margin;
+                } else if (debris.x < camLeft - margin) {
+                    debris.x = camRight + margin;
                 }
             });
 
