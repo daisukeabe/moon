@@ -201,7 +201,9 @@
             this.spaceship.setGravityY(80);
             this.spaceship.displayWidth = 50;
             this.spaceship.displayHeight = 50;
-            this.spaceship.body.setSize(50, 50); // 物理bodyを表示サイズに合わせる
+            const bodyRadius = Math.floor(this.spaceship.width / 3);
+            this.spaceship.body.setCircle(bodyRadius);
+            this.spaceship.body.setOffset(this.spaceship.width / 2 - bodyRadius, this.spaceship.height / 2 - bodyRadius);
             this.spaceship.defaultTextureName = 'spaceship';
 
             // 着陸の影を作成
