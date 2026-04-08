@@ -121,6 +121,7 @@
                 this.landingMarker.lineBetween(this.markerX, this.markerY - 10, this.markerX, this.markerY + 10);
             };
             this.currentMarkerColor = 0x00ff00;
+            this.astronautMode = false;
 
             // キーボード入力の設定
             const enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
@@ -326,6 +327,51 @@
         }
 
         function update(time, delta) {
+            // 宇宙飛行士操作モード
+            if (this.astronautMode && this.astronaut) {
+                const moveSpeed = 100;
+                if (this.cursors.left.isDown) {
+                    this.astronaut.setVelocityX(-moveSpeed);
+                    this.astronaut.setFlipX(true);
+                } else if (this.cursors.right.isDown) {
+                    this.astronaut.setVelocityX(moveSpeed);
+                    this.astronaut.setFlipX(false);
+                } else {
+                    this.astronaut.setVelocityX(0);
+                }
+
+                // ジャンプ（地面にいる時だけ）
+                if (this.cursors.up.isDown && this.astronaut.body.blocked.down) {
+                    this.astronaut.setVelocityY(-200);
+                }
+
+                // カメラを宇宙飛行士に追従
+                const cam = this.cameras.main;
+                const currentX = cam.scrollX + cam.width / 2;
+                const currentY = cam.scrollY + cam.height / 2;
+                cam.centerOn(
+                    Phaser.Math.Linear(currentX, this.astronaut.x, 0.04),
+                    Phaser.Math.Linear(currentY, this.astronaut.y, 0.04)
+                );
+
+                // デブリは飛び続ける
+                const camLeft = cam.scrollX;
+                const camRight = cam.scrollX + cam.width / cam.zoom;
+                this.debrisGroup.getChildren().forEach((debris) => {
+                    debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
+                    const margin = debris.displayWidth;
+                    if (debris.x > camRight + margin) {
+                        debris.x = camLeft - margin;
+                    } else if (debris.x < camLeft - margin) {
+                        debris.x = camRight + margin;
+                    }
+                });
+                this.debrisGroup.getChildren().forEach((debris) => {
+                    debris.angle += debris.getData('rotationSpeed');
+                });
+                return;
+            }
+
             if (!gameStarted) {
                 this.spaceship.setVelocity(0);
                 this.spaceship.setAcceleration(0);
@@ -534,7 +580,6 @@
                 this.spaceship.angle = 0;
 
                 this.goalSound.play();
-                this.add.text(this.spaceship.x, this.spaceship.y - 50, 'Good Landing', { fontSize: '32px', fill: '#FFF' }).setOrigin(0.5, 0.5).setDepth(11);
 
                 // ゴール時にjet音を停止
                 if (jetSound.isPlaying) {
@@ -553,10 +598,87 @@
                 this.jetParticles.right.on = false;
                 this.dustEmitters.forEach(e => e.on = false);
 
+                // 燃料ゲージを非表示
+                this.fuelGaugeBorder.setVisible(false);
+                this.fuelGauge.setVisible(false);
+
                 gameStarted = false; // 操作を無効化
 
-                this.time.delayedCall(3000, () => {
-                    restartGame(this);
+                // ハシゴが出てきて、宇宙飛行士が降りてくる演出
+                this.time.delayedCall(1000, () => {
+                    // ハシゴを描画（宇宙船の下から伸びる）
+                    const ladderX = this.spaceship.x - 5;
+                    const ladderTop = this.spaceship.y + 20;
+                    const ladderBottom = this.spaceship.y + 45;
+                    const ladder = this.add.graphics({ lineStyle: { width: 1, color: 0xcccccc } });
+                    ladder.setDepth(7);
+
+                    // ハシゴがスッと伸びるアニメーション
+                    let ladderProgress = 0;
+                    const ladderTween = this.tweens.addCounter({
+                        from: 0,
+                        to: 1,
+                        duration: 800,
+                        ease: 'Sine.easeOut',
+                        onUpdate: (tween) => {
+                            ladderProgress = tween.getValue();
+                            const currentBottom = ladderTop + (ladderBottom - ladderTop) * ladderProgress;
+                            ladder.clear();
+                            ladder.lineStyle(1, 0xcccccc);
+                            // 2本の縦線
+                            ladder.lineBetween(ladderX - 3, ladderTop, ladderX - 3, currentBottom);
+                            ladder.lineBetween(ladderX + 3, ladderTop, ladderX + 3, currentBottom);
+                            // 横棒（3本）
+                            const steps = 3;
+                            for (let s = 0; s <= steps; s++) {
+                                const stepY = ladderTop + (currentBottom - ladderTop) * (s / steps);
+                                if (stepY <= currentBottom) {
+                                    ladder.lineBetween(ladderX - 3, stepY, ladderX + 3, stepY);
+                                }
+                            }
+                        },
+                        onComplete: () => {
+                            // ハシゴが伸びきったら宇宙飛行士が降りてくる
+                            const astronaut = this.add.image(
+                                ladderX,
+                                ladderTop,
+                                'spaceman'
+                            );
+                            astronaut.setDisplaySize(15, 15);
+                            astronaut.setDepth(8);
+
+                            this.tweens.add({
+                                targets: astronaut,
+                                y: ladderBottom + 5,
+                                duration: 1500,
+                                ease: 'Sine.easeInOut',
+                                onComplete: () => {
+                                    // 静止画像を削除し、物理スプライトに切り替え
+                                    const ax = astronaut.x;
+                                    const ay = astronaut.y;
+                                    astronaut.destroy();
+
+                                    this.astronaut = this.physics.add.sprite(ax, ay, 'spaceman');
+                                    this.astronaut.setDisplaySize(15, 15);
+                                    this.astronaut.setDepth(8);
+                                    this.astronaut.setCollideWorldBounds(true);
+                                    this.astronaut.setGravityY(200);
+                                    this.astronaut.setBounce(0.1);
+                                    this.astronaut.body.setSize(this.astronaut.width, this.astronaut.height);
+
+                                    this.astronautMode = true; // 宇宙飛行士操作モード
+
+                                    // ズームイン
+                                    this.tweens.add({
+                                        targets: this.cameras.main,
+                                        zoom: 2.5,
+                                        duration: 1000,
+                                        ease: 'Sine.easeInOut'
+                                    });
+                                }
+                            });
+                        }
+                    });
                 });
             } else {
                 this.goalTimer = 0; // 触れていない場合、タイマーをリセットする
