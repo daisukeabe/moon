@@ -781,11 +781,11 @@
                 scene.jetParticles.right.on = false;
                 scene.dustEmitters.forEach(e => e.on = false);
 
-                // 宇宙船を非表示にする
+                // 宇宙船・影・ゲージを非表示にする
                 scene.spaceship.setVisible(false);
-
-                // 宇宙船の影を非表示にする
                 scene.spaceshipShadow.setVisible(false);
+                scene.fuelGaugeBorder.setVisible(false);
+                scene.fuelGauge.setVisible(false);
 
                 explosion.on('animationcomplete', () => {
                     explosionPlaying = false;
