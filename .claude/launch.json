@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "moon-dev",
+      "runtimeExecutable": "ruby",
+      "runtimeArgs": ["-e", "require 'webrick';WEBrick::HTTPServer.new(:Port=>(ENV['PORT']||8080).to_i,:DocumentRoot=>'/Users/abedaisuke/Documents/site/moon').start"],
+      "port": 8080,
+      "autoPort": true
+    }
+  ]
+}
