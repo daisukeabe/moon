@@ -327,22 +327,36 @@
         }
 
         function update(time, delta) {
-            // 宇宙飛行士操作モード
+            // 宇宙飛行士操作モード（手動制御、物理エンジン不使用）
             if (this.astronautMode && this.astronaut) {
-                const moveSpeed = 100;
+                const dt = delta / 1000;
+                const moveSpeed = 80;
+                const gravity = 200;
+                const jumpPower = -150;
+                const onGround = this.astronaut.y >= this.astronautGroundY;
+
+                // 左右移動
                 if (this.cursors.left.isDown) {
-                    this.astronaut.setVelocityX(-moveSpeed);
+                    this.astronaut.x -= moveSpeed * dt;
                     this.astronaut.setFlipX(true);
                 } else if (this.cursors.right.isDown) {
-                    this.astronaut.setVelocityX(moveSpeed);
+                    this.astronaut.x += moveSpeed * dt;
                     this.astronaut.setFlipX(false);
-                } else {
-                    this.astronaut.setVelocityX(0);
                 }
 
-                // ジャンプ（地面にいる時だけ）
-                if (this.cursors.up.isDown && this.astronaut.body.blocked.down) {
-                    this.astronaut.setVelocityY(-200);
+                // ジャンプ
+                if (this.cursors.up.isDown && onGround) {
+                    this.astronautVY = jumpPower;
+                }
+
+                // 重力＋位置更新
+                this.astronautVY += gravity * dt;
+                this.astronaut.y += this.astronautVY * dt;
+
+                // 地面で止まる
+                if (this.astronaut.y >= this.astronautGroundY) {
+                    this.astronaut.y = this.astronautGroundY;
+                    this.astronautVY = 0;
                 }
 
                 // カメラを宇宙飛行士に追従
@@ -598,9 +612,11 @@
                 this.jetParticles.right.on = false;
                 this.dustEmitters.forEach(e => e.on = false);
 
-                // 燃料ゲージを非表示
+                // 燃料ゲージ・ターゲットマーク・デブリを非表示
                 this.fuelGaugeBorder.setVisible(false);
                 this.fuelGauge.setVisible(false);
+                this.landingMarker.setVisible(false);
+                this.debrisGroup.getChildren().forEach(d => d.setVisible(false));
 
                 gameStarted = false; // 操作を無効化
 
@@ -629,7 +645,7 @@
                             ladder.lineBetween(ladderX - 3, ladderTop, ladderX - 3, currentBottom);
                             ladder.lineBetween(ladderX + 3, ladderTop, ladderX + 3, currentBottom);
                             // 横棒（3本）
-                            const steps = 3;
+                            const steps = 7;
                             for (let s = 0; s <= steps; s++) {
                                 const stepY = ladderTop + (currentBottom - ladderTop) * (s / steps);
                                 if (stepY <= currentBottom) {
@@ -653,19 +669,10 @@
                                 duration: 1500,
                                 ease: 'Sine.easeInOut',
                                 onComplete: () => {
-                                    // 静止画像を削除し、物理スプライトに切り替え
-                                    const ax = astronaut.x;
-                                    const ay = astronaut.y;
-                                    astronaut.destroy();
-
-                                    this.astronaut = this.physics.add.sprite(ax, ay, 'spaceman');
-                                    this.astronaut.setDisplaySize(15, 15);
-                                    this.astronaut.setDepth(8);
-                                    this.astronaut.setCollideWorldBounds(true);
-                                    this.astronaut.setGravityY(200);
-                                    this.astronaut.setBounce(0.1);
-                                    this.astronaut.body.setSize(this.astronaut.width, this.astronaut.height);
-
+                                    // そのまま操作可能にする（物理不要、手動制御）
+                                    this.astronaut = astronaut;
+                                    this.astronautGroundY = astronaut.y; // 地面のY座標を記憶
+                                    this.astronautVY = 0; // 縦方向の速度
                                     this.astronautMode = true; // 宇宙飛行士操作モード
 
                                     // ズームイン
