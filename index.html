@@ -99,12 +99,21 @@
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
             this.load.image('title', 'assets/title.png');
-            this.load.audio('title', 'assets/title.wav'); // ビープ音
-            this.load.audio('goal', 'assets/goal.wav'); // ランディング音
-            this.load.audio('explosion', 'assets/explosion.wav'); // 爆発音
-            this.load.audio('jet', 'assets/jet.wav'); // ジェット音
-            this.load.audio('empty', 'assets/empty.wav'); // エンプティー音
-            this.load.audio('end', 'assets/end.wav'); // ミッション失敗音
+            this.load.audio('title', 'assets/sound/title.wav'); // ビープ音
+            this.load.audio('goal', 'assets/sound/goal.wav'); // ランディング音
+            this.load.audio('explosion', 'assets/sound/explosion.wav'); // 爆発音
+            this.load.audio('jet', 'assets/sound/jet.wav'); // ジェット音
+            this.load.audio('empty', 'assets/sound/empty.wav'); // エンプティー音
+            this.load.audio('end', 'assets/sound/end.wav'); // ミッション失敗音
+            this.load.audio('beam', 'assets/sound/beam.wav'); // ビーム発射音
+            this.load.audio('beamhit', 'assets/sound/beamhit.wav'); // ビーム命中音
+            this.load.image('alien_L', 'assets/alien1-l.png'); // 地底人（左向き）
+            this.load.image('alien_R', 'assets/alien1-r.png'); // 地底人（右向き）
+            this.load.image('boss_L', 'assets/boss-l.png'); // ボス（左向き）
+            this.load.image('boss_R', 'assets/boss-r.png'); // ボス（右向き）
+            for (let i = 1; i <= 5; i++) {
+                this.load.audio(`footsteps${i}`, `assets/sound/footsteps${i}.wav`);
+            }
 
             for (let i = 1; i <= 15; i++) {
                 const paddedIndex = i.toString().padStart(2, '0');
@@ -226,6 +235,13 @@
             this.explosionSound = this.sound.add('explosion', { loop: false, volume: 1 });
             this.emptySound = this.sound.add('empty', { loop: true, volume: 0.1 });
             this.endSound = this.sound.add('end', { loop: false, volume: 0.3 });
+            this.footstepSounds = [];
+            for (let i = 1; i <= 5; i++) {
+                this.footstepSounds.push(this.sound.add(`footsteps${i}`, { loop: false, volume: 0.2 }));
+            }
+            this.lastFootstepTime = 0;
+            this.beamSound = this.sound.add('beam', { loop: false, volume: 0.35 });
+            this.beamHitSound = this.sound.add('beamhit', { loop: false, volume: 0.5 });
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
@@ -337,30 +353,165 @@
                 const jumpPower = -150;
                 const onGround = this.astronaut.y >= this.astronautGroundY;
 
-                // 左右移動
+                // 爆発後は一切の操作・更新を停止（演出のみ残す）
+                if (this.astronautGameOver) return;
+
+                // 左右移動（停止しても向きは維持）
+                const isMoving = this.cursors.left.isDown || this.cursors.right.isDown;
                 if (this.cursors.left.isDown) {
                     this.astronaut.x -= moveSpeed * dt;
                     this.astronaut.setTexture('spaceman_L');
+                    this.astronautFacing = 'left';
                 } else if (this.cursors.right.isDown) {
                     this.astronaut.x += moveSpeed * dt;
                     this.astronaut.setTexture('spaceman_R');
-                } else {
-                    this.astronaut.setTexture('spaceman');
+                    this.astronautFacing = 'right';
                 }
 
-                // ジャンプ
-                if (this.cursors.up.isDown && onGround) {
+                // 足音（移動中かつ接地時、ランダムで間隔再生）
+                if (isMoving && onGround && this.time.now - this.lastFootstepTime > 320) {
+                    const step = Phaser.Utils.Array.GetRandom(this.footstepSounds);
+                    step.play();
+                    this.lastFootstepTime = this.time.now;
+                } else if (!isMoving) {
+                    this.lastFootstepTime = 0; // 停止時リセットで次の歩き出しが即鳴る
+                }
+
+                // ビーム残量の自動回復（宇宙船の下に戻ると急速充電）
+                const underShip = this.spaceship && Math.abs(this.astronaut.x - this.spaceship.x) < 30;
+                const regenRate = underShip ? 90 : 15;
+                this.beamEnergy = Math.min(100, this.beamEnergy + regenRate * dt);
+
+                // ビーム残量ゲージ更新（宇宙飛行士上部、色も残量に追従）
+                const gx = this.astronaut.x;
+                const gy = this.astronaut.y - 14;
+                this.beamGaugeBg.setPosition(gx, gy);
+                const gaugeRatio = Phaser.Math.Clamp(this.beamEnergy / 100, 0, 1);
+                const fillW = 10 * gaugeRatio;
+                this.beamGaugeFill.setPosition(gx - (10 - fillW) / 2, gy);
+                this.beamGaugeFill.width = fillW;
+                const gr = Math.round(0xff * (1 - gaugeRatio));
+                const gg = Math.round(0xff * gaugeRatio);
+                const gb = Math.round(0xcc * gaugeRatio);
+                this.beamGaugeFill.fillColor = (gr << 16) | (gg << 8) | gb;
+
+                // レーザー発射（スペース。向きが確定＋残量5以上）
+                if (this.astronautFacing && this.beamEnergy >= 5 && Phaser.Input.Keyboard.JustDown(this.cursors.space)) {
+                    const ratio = Phaser.Math.Clamp(this.beamEnergy / 100, 0, 1);
+                    const dir = this.astronautFacing === 'left' ? -1 : 1;
+                    const startX = this.astronaut.x + dir * 6;
+                    const startY = this.astronaut.y - 2;
+                    // 残量でビーム色(cyan→red)と長さが変化
+                    const r = Math.round(0xff * (1 - ratio));
+                    const g = Math.round(0xff * ratio);
+                    const b = Math.round(0xcc * ratio);
+                    const beamColor = (r << 16) | (g << 8) | b;
+                    const beamLen = 6 + 14 * ratio;
+                    const glowLen = 4 + 10 * ratio;
+                    const beam = this.add.rectangle(startX, startY, beamLen, 1, beamColor);
+                    beam.setDepth(9);
+                    const glow = this.add.rectangle(startX, startY, glowLen, 1, 0xffffff);
+                    glow.setDepth(10);
+                    // 威力：ratioで1〜3段階
+                    const power = ratio >= 0.67 ? 3 : ratio >= 0.34 ? 2 : 1;
+                    this.lasers.push({ beam, glow, dir, speed: 500, born: this.time.now, life: 1200, power });
+                    this.beamSound.play();
+                    this.beamEnergy = Math.max(0, this.beamEnergy - 22);
+                }
+
+                // レーザー更新＋標的との衝突判定
+                if (this.lasers) {
+                    this.lasers = this.lasers.filter(l => {
+                        const dx = l.dir * l.speed * dt;
+                        l.beam.x += dx;
+                        l.glow.x += dx;
+                        // 当たり判定（地底人）
+                        let hit = false;
+                        if (this.enemies && this.enemies.length) {
+                            const beamBounds = l.beam.getBounds();
+                            this.enemies = this.enemies.filter(e => {
+                                if (!hit && !e.emerging && Phaser.Geom.Intersects.RectangleToRectangle(beamBounds, e.getBounds())) {
+                                    e.hp -= l.power;
+                                    this.beamHitSound.play();
+                                    hit = true;
+                                    if (e.hp <= 0) {
+                                        e.destroy();
+                                        this.enemyKills++;
+                                        if (this.enemyKills % 5 === 0) this.bossesDue++;
+                                        return false;
+                                    }
+                                    // ダメージフラッシュ
+                                    this.tweens.add({ targets: e, alpha: 0.3, duration: 80, yoyo: true });
+                                }
+                                return true;
+                            });
+                        }
+                        if (hit || this.time.now - l.born > l.life) {
+                            l.beam.destroy();
+                            l.glow.destroy();
+                            return false;
+                        }
+                        return true;
+                    });
+                }
+
+                // ジャンプ（押し始めで初速、離したら上昇を切って強弱をつける）
+                if (Phaser.Input.Keyboard.JustDown(this.cursors.up) && onGround) {
                     this.astronautVY = jumpPower;
+                }
+                if (Phaser.Input.Keyboard.JustUp(this.cursors.up) && this.astronautVY < 0) {
+                    this.astronautVY *= 0.35;
                 }
 
                 // 重力＋位置更新
                 this.astronautVY += gravity * dt;
                 this.astronaut.y += this.astronautVY * dt;
 
-                // 地面で止まる
+                // 地面で止まる（着地した瞬間に足音）
                 if (this.astronaut.y >= this.astronautGroundY) {
                     this.astronaut.y = this.astronautGroundY;
+                    if (!onGround) {
+                        Phaser.Utils.Array.GetRandom(this.footstepSounds).play();
+                        this.lastFootstepTime = this.time.now;
+                    }
                     this.astronautVY = 0;
+                }
+
+                // 地底人の移動＋宇宙飛行士との衝突
+                if (this.enemies && this.enemies.length) {
+                    const enemySpeed = 45;
+                    // 接触判定用の縮小ボックス（透過余白を除外）
+                    const shrink = (obj, px, py) => {
+                        const b = obj.getBounds();
+                        return new Phaser.Geom.Rectangle(b.x + px, b.y + py, b.width - px * 2, b.height - py * 2);
+                    };
+                    const astroBox = shrink(this.astronaut, 3, 2);
+                    for (const e of this.enemies) {
+                        if (e.emerging) continue;
+                        const dx = this.astronaut.x - e.x;
+                        const sign = dx === 0 ? 1 : Math.sign(dx);
+                        const sp = e.isBoss ? 28 : enemySpeed;
+                        e.x += sign * sp * dt;
+                        const prefix = e.isBoss ? 'boss_' : 'alien_';
+                        e.setTexture(prefix + (sign < 0 ? 'L' : 'R'));
+                        const enemyBox = e.isBoss ? shrink(e, 6, 5) : shrink(e, 2, 3);
+                        if (!this.astronautGameOver && Phaser.Geom.Intersects.RectangleToRectangle(astroBox, enemyBox)) {
+                            this.astronautGameOver = true;
+                            // 爆発アニメ＋爆発音
+                            const explosion = this.add.sprite(this.astronaut.x, this.astronaut.y, 'explosion');
+                            explosion.setDepth(10);
+                            explosion.play('explode');
+                            this.explosionSound.play();
+                            // 宇宙飛行士・ゲージを非表示
+                            this.astronaut.setVisible(false);
+                            this.beamGaugeBg.setVisible(false);
+                            this.beamGaugeFill.setVisible(false);
+                            this.time.delayedCall(1000, () => {
+                                this.add.text(this.astronaut.x, this.astronaut.y - 30, 'Mission Failed', { fontSize: '20px', fill: '#FFF' }).setOrigin(0.5).setDepth(12);
+                            });
+                            this.time.delayedCall(3000, () => { this.scene.restart(); });
+                        }
+                    }
                 }
 
                 // カメラを宇宙飛行士に追従
@@ -677,6 +828,56 @@
                                     this.astronaut = astronaut;
                                     this.astronautGroundY = astronaut.y; // 地面のY座標を記憶
                                     this.astronautVY = 0; // 縦方向の速度
+                                    this.astronautFacing = null; // 向き（左右移動後に確定、未確定時は発射不可）
+                                    this.lasers = []; // 発射中のレーザー
+                                    this.beamEnergy = 100; // ビーム残量（0-100）
+                                    this.enemies = []; // 地底人
+                                    this.enemyKills = 0;
+                                    this.bossesDue = 0;
+                                    this.astronautGameOver = false;
+
+                                    // ビーム残量ゲージ（宇宙飛行士上部に追従、小さめ＆コントラスト色）
+                                    this.beamGaugeBg = this.add.rectangle(0, 0, 10, 1, 0x000000).setDepth(11);
+                                    this.beamGaugeFill = this.add.rectangle(0, 0, 10, 1, 0x00ffcc).setDepth(12);
+
+                                    // 地底人スポーン（地面からランダム位置で飛び出す）
+                                    this.spawnEnemy = () => {
+                                        if (this.astronautGameOver || !this.astronautMode) return;
+                                        const side = Phaser.Math.Between(0, 1) ? -1 : 1;
+                                        const distance = Phaser.Math.Between(160, 360);
+                                        const spawnX = this.astronaut.x + side * distance;
+                                        const isBoss = this.bossesDue > 0;
+                                        if (isBoss) this.bossesDue--;
+                                        const dirFace = spawnX < this.astronaut.x ? 'R' : 'L';
+                                        const initTex = (isBoss ? 'boss_' : 'alien_') + dirFace;
+                                        // 主人公の画像下端（=視覚的な足元）に合わせる
+                                        const feetY = this.astronaut.getBounds().bottom;
+                                        const enemy = this.add.image(spawnX, feetY + 20, initTex);
+                                        enemy.setOrigin(0.5, 1);
+                                        if (isBoss) {
+                                            enemy.setDisplaySize(40, 40);
+                                            enemy.hp = 10;
+                                        } else {
+                                            enemy.setDisplaySize(12, 24);
+                                            enemy.hp = 3;
+                                        }
+                                        enemy.isBoss = isBoss;
+                                        enemy.setDepth(8);
+                                        enemy.alpha = 0;
+                                        enemy.emerging = true;
+                                        this.tweens.add({
+                                            targets: enemy,
+                                            y: feetY,
+                                            alpha: 1,
+                                            duration: 600,
+                                            ease: 'Sine.easeOut',
+                                            onComplete: () => { enemy.emerging = false; }
+                                        });
+                                        this.enemies.push(enemy);
+                                        this.time.delayedCall(Phaser.Math.Between(700, 1800), this.spawnEnemy);
+                                    };
+                                    this.time.delayedCall(1500, this.spawnEnemy);
+
                                     this.astronautMode = true; // 宇宙飛行士操作モード
 
                                     // ズームイン
