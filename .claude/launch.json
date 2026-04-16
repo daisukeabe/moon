@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "moon-dev",
-      "runtimeExecutable": "ruby",
-      "runtimeArgs": ["-e", "require 'webrick';WEBrick::HTTPServer.new(:Port=>(ENV['PORT']||8080).to_i,:DocumentRoot=>'/Users/abedaisuke/Documents/site/moon').start"],
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8080"],
       "port": 8080,
       "autoPort": true
     }

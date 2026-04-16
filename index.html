@@ -92,7 +92,9 @@
             this.load.image('background', 'assets/background.jpg');
             this.load.image('spaceship', 'assets/spaceship.png');
             this.load.image('spacemy', 'assets/spacemy.png');
-            this.load.image('spaceman', 'assets/spaceman.png');
+            this.load.image('spaceman', 'assets/player-f.png');
+            this.load.image('spaceman_L', 'assets/player-l.png');
+            this.load.image('spaceman_R', 'assets/player-r.png');
             this.load.image('spaceshipshadow', 'assets/spaceshipshadow.png');
             this.load.image('flag', 'assets/flag.png');
             this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 256, frameHeight: 256 });
@@ -338,10 +340,12 @@
                 // 左右移動
                 if (this.cursors.left.isDown) {
                     this.astronaut.x -= moveSpeed * dt;
-                    this.astronaut.setFlipX(true);
+                    this.astronaut.setTexture('spaceman_L');
                 } else if (this.cursors.right.isDown) {
                     this.astronaut.x += moveSpeed * dt;
-                    this.astronaut.setFlipX(false);
+                    this.astronaut.setTexture('spaceman_R');
+                } else {
+                    this.astronaut.setTexture('spaceman');
                 }
 
                 // ジャンプ
