@@ -107,10 +107,13 @@
             this.load.audio('end', 'assets/sound/end.wav'); // ミッション失敗音
             this.load.audio('beam', 'assets/sound/beam.wav'); // ビーム発射音
             this.load.audio('beamhit', 'assets/sound/beamhit.wav'); // ビーム命中音
+            this.load.audio('blood', 'assets/sound/blood.wav'); // 被弾音
             this.load.image('alien_L', 'assets/alien1-l.png'); // 地底人（左向き）
             this.load.image('alien_R', 'assets/alien1-r.png'); // 地底人（右向き）
             this.load.image('boss_L', 'assets/boss-l.png'); // ボス（左向き）
             this.load.image('boss_R', 'assets/boss-r.png'); // ボス（右向き）
+            this.load.spritesheet('blood', 'assets/blood-p.png', { frameWidth: 512, frameHeight: 512 }); // 被弾エフェクト
+            this.load.spritesheet('bloodAlien', 'assets/blood-a.png', { frameWidth: 512, frameHeight: 512 }); // エイリアン撃破エフェクト
             for (let i = 1; i <= 5; i++) {
                 this.load.audio(`footsteps${i}`, `assets/sound/footsteps${i}.wav`);
             }
@@ -244,6 +247,7 @@
             this.lastFootstepTime = 0;
             this.beamSound = this.sound.add('beam', { loop: false, volume: 0.35 });
             this.beamHitSound = this.sound.add('beamhit', { loop: false, volume: 0.5 });
+            this.bloodSound = this.sound.add('blood', { loop: false, volume: 0.5 });
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
 
@@ -324,6 +328,23 @@
                 onComplete: function (anim, frame, gameObject) {
                     gameObject.destroy();
                 }
+            });
+
+            // 被弾（血飛沫）アニメーションの作成
+            this.anims.create({
+                key: 'bloodSplat',
+                frames: this.anims.generateFrameNumbers('blood', { start: 0, end: 5 }),
+                frameRate: 14,
+                repeat: 0,
+                hideOnComplete: true
+            });
+            // エイリアン撃破（緑血）アニメーション
+            this.anims.create({
+                key: 'bloodAlienSplat',
+                frames: this.anims.generateFrameNumbers('bloodAlien', { start: 0, end: 5 }),
+                frameRate: 14,
+                repeat: 0,
+                hideOnComplete: true
             });
 
             // コントローラーの作成
@@ -437,6 +458,11 @@
                                     this.beamHitSound.play();
                                     hit = true;
                                     if (e.hp <= 0) {
+                                        const abSize = e.isBoss ? 90 : 45;
+                                        const ab = this.add.sprite(e.x, e.y - 5, 'bloodAlien');
+                                        ab.setDisplaySize(abSize, abSize);
+                                        ab.setDepth(10);
+                                        ab.play('bloodAlienSplat');
                                         e.destroy();
                                         this.enemyKills++;
                                         if (this.enemyKills % 5 === 0) this.bossesDue++;
@@ -503,19 +529,71 @@
                         const enemyBox = e.isBoss ? shrink(e, 6, 5) : shrink(e, 2, 3);
                         if (!this.astronautGameOver && Phaser.Geom.Intersects.RectangleToRectangle(astroBox, enemyBox)) {
                             this.astronautGameOver = true;
-                            // 爆発アニメ＋爆発音
-                            const explosion = this.add.sprite(this.astronaut.x, this.astronaut.y, 'explosion');
-                            explosion.setDepth(10);
-                            explosion.play('explode');
-                            this.explosionSound.play();
-                            // 宇宙飛行士・ゲージを非表示
-                            this.astronaut.setVisible(false);
                             this.beamGaugeBg.setVisible(false);
                             this.beamGaugeFill.setVisible(false);
-                            this.time.delayedCall(1000, () => {
-                                this.add.text(this.astronaut.x, this.astronaut.y - 30, 'Mission Failed', { fontSize: '20px', fill: '#FFF' }).setOrigin(0.5).setDepth(12);
+
+                            // プレイヤーの上に泡が徐々に増えて覆い尽くし、地中へ引きずり込まれる
+                            const captureX = this.astronaut.x;
+                            const captureY = this.astronaut.y;
+
+                            // プレイヤーは表示したまま、マスク適用
+                            this.astronaut.setDepth(9);
+                            this.astronaut.setMask(this.groundMask);
+                            e.setDepth(10);
+                            e.setMask(this.groundMask);
+
+                            // 泡を時間差で増やしていく（プレイヤーの上のレイヤー）
+                            const bubbles = [];
+                            const totalBubbles = 25;
+                            for (let i = 0; i < totalBubbles; i++) {
+                                this.time.delayedCall(i * 40, () => {
+                                    const bx = captureX + Phaser.Math.Between(-6, 6);
+                                    const by = captureY + Phaser.Math.Between(-7, 7);
+                                    const r = Phaser.Math.FloatBetween(1.5, 4);
+                                    const b = this.add.circle(bx, by, r, 0x33dd33, Phaser.Math.FloatBetween(0.6, 0.95));
+                                    b.setDepth(11);
+                                    b.setMask(this.groundMask);
+                                    bubbles.push(b);
+                                    // 各泡がぶくぶく揺れる
+                                    this.tweens.add({
+                                        targets: b,
+                                        x: b.x + Phaser.Math.Between(-3, 3),
+                                        y: b.y + Phaser.Math.Between(-3, 3),
+                                        scaleX: Phaser.Math.FloatBetween(0.8, 1.4),
+                                        scaleY: Phaser.Math.FloatBetween(0.8, 1.4),
+                                        duration: Phaser.Math.Between(300, 500),
+                                        ease: 'Sine.easeInOut',
+                                        yoyo: true,
+                                        repeat: -1
+                                    });
+                                });
+                            }
+
+                            // エイリアンを寄せる
+                            this.tweens.add({
+                                targets: e,
+                                x: captureX,
+                                duration: 500,
+                                ease: 'Sine.easeOut'
                             });
-                            this.time.delayedCall(3000, () => { this.scene.restart(); });
+
+                            // 泡が覆い尽くしたら、全員まとめて地中へ
+                            this.time.delayedCall(totalBubbles * 40 + 400, () => {
+                                this.astronaut.setVisible(false);
+                                const sinkY = this.groundFeetY + 50;
+                                this.tweens.add({
+                                    targets: [...bubbles, e],
+                                    y: sinkY,
+                                    duration: 1000,
+                                    ease: 'Sine.easeIn',
+                                    onComplete: () => {
+                                        bubbles.forEach(b => b.destroy());
+                                        e.destroy();
+                                        this.add.text(captureX, captureY - 20, 'Mission Failed', { fontSize: '20px', fill: '#FFF' }).setOrigin(0.5).setDepth(12);
+                                        this.time.delayedCall(2500, () => { this.scene.restart(); });
+                                    }
+                                });
+                            });
                         }
                     }
                 }
@@ -846,7 +924,14 @@
                                     this.beamGaugeBg = this.add.rectangle(0, 0, 10, 1, 0x000000).setDepth(11);
                                     this.beamGaugeFill = this.add.rectangle(0, 0, 10, 1, 0x00ffcc).setDepth(12);
 
-                                    // 地底人スポーン（地面からランダム位置で飛び出す）
+                                    // 地面マスク（地面より上だけ表示。出現・引きずり込みに使用）
+                                    this.groundFeetY = this.astronautGroundY + this.astronaut.displayHeight / 2;
+                                    const maskGfx = this.make.graphics();
+                                    maskGfx.fillStyle(0xffffff);
+                                    maskGfx.fillRect(-2000, -2000, 6000, this.groundFeetY + 2000);
+                                    this.groundMask = maskGfx.createGeometryMask();
+
+                                    // 地底人スポーン（地面から頭→体→足の順で這い出す）
                                     this.spawnEnemy = () => {
                                         if (this.astronautGameOver || !this.astronautMode) return;
                                         const side = Phaser.Math.Between(0, 1) ? -1 : 1;
@@ -856,9 +941,8 @@
                                         if (isBoss) this.bossesDue--;
                                         const dirFace = spawnX < this.astronaut.x ? 'R' : 'L';
                                         const initTex = (isBoss ? 'boss_' : 'alien_') + dirFace;
-                                        // 主人公の地上足元（固定値。ジャンプ中のスポーンでもズレない）
-                                        const feetY = this.astronautGroundY + this.astronaut.displayHeight / 2;
-                                        const enemy = this.add.image(spawnX, feetY + 20, initTex);
+                                        const enemyH = isBoss ? 40 : 24;
+                                        const enemy = this.add.image(spawnX, this.groundFeetY + enemyH, initTex);
                                         enemy.setOrigin(0.5, 1);
                                         if (isBoss) {
                                             enemy.setDisplaySize(40, 40);
@@ -869,15 +953,17 @@
                                         }
                                         enemy.isBoss = isBoss;
                                         enemy.setDepth(8);
-                                        enemy.alpha = 0;
+                                        enemy.setMask(this.groundMask);
                                         enemy.emerging = true;
                                         this.tweens.add({
                                             targets: enemy,
-                                            y: feetY,
-                                            alpha: 1,
-                                            duration: 600,
+                                            y: this.groundFeetY,
+                                            duration: 900,
                                             ease: 'Sine.easeOut',
-                                            onComplete: () => { enemy.emerging = false; }
+                                            onComplete: () => {
+                                                enemy.emerging = false;
+                                                enemy.clearMask();
+                                            }
                                         });
                                         this.enemies.push(enemy);
                                         this.time.delayedCall(Phaser.Math.Between(700, 1800), this.spawnEnemy);
