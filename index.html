@@ -150,6 +150,8 @@
 
             // 背景画像をシーンの中心に配置
             this.add.image(sceneWidth / 2, sceneHeight / 2, 'background').setDisplaySize(imageWidth, imageHeight);
+            // 宇宙船の移動範囲を拡張（背景・ゴール位置はそのまま、カメラは自由追従）
+            this.physics.world.setBounds(-800, -500, 3000, 1400);
             this.physics.world.gravity.y = 0; // 全体の重力値を設定
             this.fuel = 250; // 燃料の最大値を設定
 
@@ -488,8 +490,12 @@
                     const astroBox = shrink(this.astronaut, 3, 2);
                     for (const e of this.enemies) {
                         if (e.emerging) continue;
-                        const dx = this.astronaut.x - e.x;
-                        const sign = dx === 0 ? 1 : Math.sign(dx);
+                        // 主人公が空中の間は方向転換しない（飛び越え後すぐ捕まるのを防止）
+                        if (onGround) {
+                            const dx = this.astronaut.x - e.x;
+                            e.lastDir = dx === 0 ? (e.lastDir || 1) : Math.sign(dx);
+                        }
+                        const sign = e.lastDir || 1;
                         const sp = e.isBoss ? 28 : enemySpeed;
                         e.x += sign * sp * dt;
                         const prefix = e.isBoss ? 'boss_' : 'alien_';
@@ -524,8 +530,8 @@
                 );
 
                 // デブリは飛び続ける
-                const camLeft = cam.scrollX;
-                const camRight = cam.scrollX + cam.width / cam.zoom;
+                const camLeft = cam.worldView.left;
+                const camRight = cam.worldView.right;
                 this.debrisGroup.getChildren().forEach((debris) => {
                     debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
                     const margin = debris.displayWidth;
@@ -850,8 +856,8 @@
                                         if (isBoss) this.bossesDue--;
                                         const dirFace = spawnX < this.astronaut.x ? 'R' : 'L';
                                         const initTex = (isBoss ? 'boss_' : 'alien_') + dirFace;
-                                        // 主人公の画像下端（=視覚的な足元）に合わせる
-                                        const feetY = this.astronaut.getBounds().bottom;
+                                        // 主人公の地上足元（固定値。ジャンプ中のスポーンでもズレない）
+                                        const feetY = this.astronautGroundY + this.astronaut.displayHeight / 2;
                                         const enemy = this.add.image(spawnX, feetY + 20, initTex);
                                         enemy.setOrigin(0.5, 1);
                                         if (isBoss) {
@@ -934,8 +940,8 @@
 
             // デブリの移動
             const cam = this.cameras.main;
-            const camLeft = cam.scrollX;
-            const camRight = cam.scrollX + cam.width / cam.zoom;
+            const camLeft = cam.worldView.left;
+            const camRight = cam.worldView.right;
             this.debrisGroup.getChildren().forEach((debris) => {
                 debris.x += debris.getData('speed') * this.sys.game.loop.delta / 500;
 
