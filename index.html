@@ -107,6 +107,7 @@
             this.load.audio('end', 'assets/sound/end.wav'); // ミッション失敗音
             this.load.audio('beam', 'assets/sound/beam.wav'); // ビーム発射音
             this.load.audio('beamhit', 'assets/sound/beamhit.wav'); // ビーム命中音
+            this.load.audio('beam-tame', 'assets/sound/beam-tame.wav'); // ビームチャージ音
             this.load.audio('blood', 'assets/sound/blood.wav'); // 被弾音
             this.load.image('alien_L', 'assets/alien1-l.png'); // 地底人（左向き）
             this.load.image('alien_R', 'assets/alien1-r.png'); // 地底人（右向き）
@@ -251,6 +252,7 @@
             this.lastFootstepTime = 0;
             this.beamSound = this.sound.add('beam', { loop: false, volume: 0.35 });
             this.beamHitSound = this.sound.add('beamhit', { loop: false, volume: 0.5 });
+            this.beamTameSound = this.sound.add('beam-tame', { loop: true, volume: 0.1 });
             this.bloodSound = this.sound.add('blood', { loop: false, volume: 0.5 });
             jetSound = this.sound.add('jet', { loop: true, volume: 0.5 });
             cursors = this.input.keyboard.createCursorKeys();
@@ -430,6 +432,11 @@
                 } else {
                     this.beamGaugeFill.fillColor = normalColor;
                 }
+                if (charging && !this.chargedFired && !this.beamTameSound.isPlaying) {
+                    this.beamTameSound.play();
+                } else if ((!charging || this.chargedFired) && this.beamTameSound.isPlaying) {
+                    this.beamTameSound.stop();
+                }
 
                 // スペース押下：チャージ計測開始（ここでは発射しない）
                 if (this.astronautFacing && Phaser.Input.Keyboard.JustDown(this.cursors.space)) {
@@ -603,6 +610,7 @@
                             this.crewFollowing = false;
                             this.beamGaugeBg.setVisible(false);
                             this.beamGaugeFill.setVisible(false);
+                            this.bloodSound.play();
 
                             const captureX = hitCrew.x;
                             const captureY = hitCrew.y - hitCrew.displayHeight / 2;
@@ -666,6 +674,7 @@
                             this.astronautGameOver = true;
                             this.beamGaugeBg.setVisible(false);
                             this.beamGaugeFill.setVisible(false);
+                            this.bloodSound.play();
 
                             // プレイヤーの上に泡が徐々に増えて覆い尽くし、地中へ引きずり込まれる
                             const captureX = this.astronaut.x;
