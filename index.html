@@ -110,6 +110,9 @@
             this.load.audio('beamhit', 'assets/sound/beamhit.wav'); // ビーム命中音
             this.load.audio('beam-tame', 'assets/sound/beam-tame.wav'); // ビームチャージ音
             this.load.audio('blood', 'assets/sound/blood.wav'); // 被弾音
+            this.load.audio('hatchopen', 'assets/sound/hatchopen.wav'); // ハッチ開
+            this.load.audio('escape-injection', 'assets/sound/escape-injection.wav'); // 脱出点火
+            this.load.audio('escape-jet', 'assets/sound/escape-jet.wav'); // 脱出ジェット
             this.load.image('alien_L', 'assets/alien1-l.png'); // 地底人（左向き）
             this.load.image('alien_R', 'assets/alien1-r.png'); // 地底人（右向き）
             this.load.image('mooncar', 'assets/moon-car.png'); // 大破した月面探査車
@@ -446,12 +449,12 @@
                 }
 
                 // スペース押下：チャージ計測開始（ここでは発射しない）
-                if (this.astronautFacing && Phaser.Input.Keyboard.JustDown(this.cursors.space)) {
+                if (!this.playerClimbing && this.astronautFacing && Phaser.Input.Keyboard.JustDown(this.cursors.space)) {
                     this.beamHoldStart = this.time.now;
                     this.chargedFired = false;
                 }
                 // スペース離した瞬間：チャージが発火してなければ通常ビーム
-                if (Phaser.Input.Keyboard.JustUp(this.cursors.space)) {
+                if (!this.playerClimbing && Phaser.Input.Keyboard.JustUp(this.cursors.space)) {
                     if (this.astronautFacing && this.beamHoldStart && !this.chargedFired && this.beamEnergy >= 5) {
                         const ratio = Phaser.Math.Clamp(this.beamEnergy / 100, 0, 1);
                         const dir = this.astronautFacing === 'left' ? -1 : 1;
@@ -476,7 +479,7 @@
                 }
 
                 // 長押し2秒 + エネルギー50以上 → チャージビーム（画面端まで貫通）
-                if (this.astronautFacing && this.cursors.space.isDown && this.beamHoldStart
+                if (!this.playerClimbing && this.astronautFacing && this.cursors.space.isDown && this.beamHoldStart
                     && !this.chargedFired && this.time.now - this.beamHoldStart >= 1500 && this.beamEnergy >= 50) {
                     this.chargedFired = true;
                     const dir = this.astronautFacing === 'left' ? -1 : 1;
@@ -835,6 +838,8 @@
                         this.playerClimbing = true;
                         this.beamGaugeBg.setVisible(false);
                         this.beamGaugeFill.setVisible(false);
+                        this.beamHoldStart = null;
+                        if (this.beamTameSound.isPlaying) this.beamTameSound.stop();
                         const face = ladderX < this.astronaut.x ? 'L' : 'R';
                         this.astronaut.setTexture('spaceman_' + face);
                         this.tweens.add({
@@ -858,8 +863,14 @@
                                             duration: 5000,
                                             ease: 'Sine.easeInOut'
                                         });
+                                        // 発射前2秒：ハッチ開
+                                        this.sound.play('hatchopen', { volume: 0.7 });
                                         // 2秒後：宇宙船上部からポッド打ち上げ
                                         this.time.delayedCall(2000, () => {
+                                            // 脱出音：点火とジェットを同時再生
+                                            this.sound.play('escape-injection', { volume: 0.8 });
+                                            this.escapeJetSound = this.sound.add('escape-jet', { loop: true, volume: 0.6 });
+                                            this.escapeJetSound.play();
                                             const podX = this.spaceship.x;
                                             const podY = this.spaceship.y - 20;
                                             const pod = this.add.image(podX, podY, 'pod');
@@ -888,39 +899,51 @@
                                             });
                                             this.enemies = [];
 
-                                            // 発射マズル噴射：左右に白煙＋炎（大きく派手に）
-                                            for (let side = -1; side <= 1; side += 2) {
-                                                // フラッシュ（瞬間の閃光）
-                                                const flash = this.add.circle(podX + side * 10, podY + 2, 22, 0xffffff, 1);
-                                                flash.setDepth(11);
-                                                this.tweens.add({
-                                                    targets: flash,
-                                                    scale: 2.5,
-                                                    alpha: 0,
-                                                    duration: 180,
-                                                    ease: 'Cubic.easeOut',
-                                                    onComplete: () => flash.destroy()
-                                                });
-                                                for (let i = 0; i < 28; i++) {
-                                                    const isSmoke = i % 2 === 0;
-                                                    const color = isSmoke
-                                                        ? (Phaser.Math.Between(0, 1) ? 0xffffff : 0xdddddd)
-                                                        : (Phaser.Math.Between(0, 2) === 0 ? 0xff4422 : (Phaser.Math.Between(0, 1) ? 0xff9933 : 0xffee55));
-                                                    const r = isSmoke ? Phaser.Math.FloatBetween(4, 8) : Phaser.Math.FloatBetween(3, 6);
-                                                    const p = this.add.circle(podX + side * 10, podY + 2, r, color, 0.95);
-                                                    p.setDepth(10);
-                                                    this.tweens.add({
-                                                        targets: p,
-                                                        x: p.x + side * Phaser.Math.Between(60, 140),
-                                                        y: p.y + Phaser.Math.Between(-24, 24),
-                                                        alpha: 0,
-                                                        scale: isSmoke ? 4.5 : 0.4,
-                                                        duration: Phaser.Math.Between(500, 1000),
-                                                        ease: 'Cubic.easeOut',
-                                                        onComplete: () => p.destroy()
-                                                    });
-                                                }
-                                            }
+                                            // 発射マズル：着陸粉塵と同じ要領で左右へ舞い上がる煙
+                                            const muzzle = this.add.particles('dustLarge');
+                                            muzzle.setDepth(10);
+                                            const makeSide = (sx, angleRange) => muzzle.createEmitter({
+                                                x: sx,
+                                                y: podY + 2,
+                                                speed: { min: 40, max: 160 },
+                                                angle: angleRange,
+                                                scale: { start: 0.25, end: 2.2 },
+                                                alpha: { start: 0.7, end: 0 },
+                                                tint: [0xffffff, 0xeeeeee, 0xdddddd],
+                                                lifespan: { min: 700, max: 1400 },
+                                                quantity: 1,
+                                                on: false
+                                            });
+                                            const leftEm = makeSide(podX - 10, { min: 155, max: 205 });
+                                            const rightEm = makeSide(podX + 10, { min: -25, max: 25 });
+                                            leftEm.explode(26);
+                                            rightEm.explode(26);
+                                            // 炎のチラッとした赤味（少量）
+                                            const flame = this.add.particles('jetParticle');
+                                            flame.setDepth(10);
+                                            const flameL = flame.createEmitter({
+                                                x: podX - 8, y: podY + 2,
+                                                speed: { min: 80, max: 200 },
+                                                angle: { min: 165, max: 195 },
+                                                scale: { start: 0.5, end: 0 },
+                                                alpha: { start: 0.9, end: 0 },
+                                                tint: [0xff4422, 0xff8833, 0xffcc44],
+                                                lifespan: { min: 200, max: 400 },
+                                                on: false
+                                            });
+                                            const flameR = flame.createEmitter({
+                                                x: podX + 8, y: podY + 2,
+                                                speed: { min: 80, max: 200 },
+                                                angle: { min: -15, max: 15 },
+                                                scale: { start: 0.5, end: 0 },
+                                                alpha: { start: 0.9, end: 0 },
+                                                tint: [0xff4422, 0xff8833, 0xffcc44],
+                                                lifespan: { min: 200, max: 400 },
+                                                on: false
+                                            });
+                                            flameL.explode(10);
+                                            flameR.explode(10);
+                                            this.time.delayedCall(1800, () => { muzzle.destroy(); flame.destroy(); });
 
                                             // 下部の噴射ノズル炎（ポッドに追従し、上昇中は常時噴射）
                                             const nozzle = this.add.graphics();
@@ -972,6 +995,7 @@
                                                     pod.destroy();
                                                     nozzleTimer.remove();
                                                     nozzle.destroy();
+                                                    if (this.escapeJetSound && this.escapeJetSound.isPlaying) this.escapeJetSound.stop();
                                                 }
                                             });
                                         });
