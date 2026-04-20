@@ -90,6 +90,7 @@
 
         function preload() {
             this.load.image('background', 'assets/background.jpg');
+            this.load.image('pod', 'assets/pod.png');
             this.load.image('spaceship', 'assets/spaceship.png');
             this.load.image('spacemy', 'assets/spacemy.png');
             this.load.image('spaceman', 'assets/player-f.png');
@@ -389,12 +390,12 @@
                 }
 
                 // 左右移動（停止しても向きは維持）
-                const isMoving = this.cursors.left.isDown || this.cursors.right.isDown;
-                if (this.cursors.left.isDown) {
+                const isMoving = !this.playerClimbing && (this.cursors.left.isDown || this.cursors.right.isDown);
+                if (!this.playerClimbing && this.cursors.left.isDown) {
                     this.astronaut.x -= moveSpeed * dt;
                     this.astronaut.setTexture('spaceman_L');
                     this.astronautFacing = 'left';
-                } else if (this.cursors.right.isDown) {
+                } else if (!this.playerClimbing && this.cursors.right.isDown) {
                     this.astronaut.x += moveSpeed * dt;
                     this.astronaut.setTexture('spaceman_R');
                     this.astronautFacing = 'right';
@@ -574,18 +575,20 @@
                     this.astronautVY *= 0.35;
                 }
 
-                // 重力＋位置更新
-                this.astronautVY += gravity * dt;
-                this.astronaut.y += this.astronautVY * dt;
+                // 重力＋位置更新（帰還時はtween任せで物理停止）
+                if (!this.returningToShip) {
+                    this.astronautVY += gravity * dt;
+                    this.astronaut.y += this.astronautVY * dt;
 
-                // 地面で止まる（着地した瞬間に足音）
-                if (this.astronaut.y >= this.astronautGroundY) {
-                    this.astronaut.y = this.astronautGroundY;
-                    if (!onGround) {
-                        Phaser.Utils.Array.GetRandom(this.footstepSounds).play();
-                        this.lastFootstepTime = this.time.now;
+                    // 地面で止まる（着地した瞬間に足音）
+                    if (this.astronaut.y >= this.astronautGroundY) {
+                        this.astronaut.y = this.astronautGroundY;
+                        if (!onGround) {
+                            Phaser.Utils.Array.GetRandom(this.footstepSounds).play();
+                            this.lastFootstepTime = this.time.now;
+                        }
+                        this.astronautVY = 0;
                     }
-                    this.astronautVY = 0;
                 }
 
                 // 地底人の移動＋宇宙飛行士との衝突
@@ -681,7 +684,7 @@
                             });
                             break; // このフレームで以降の処理は不要
                         }
-                        if (!this.astronautGameOver && Phaser.Geom.Intersects.RectangleToRectangle(astroBox, enemyBox)) {
+                        if (!this.astronautGameOver && !this.returningToShip && Phaser.Geom.Intersects.RectangleToRectangle(astroBox, enemyBox)) {
                             this.astronautGameOver = true;
                             this.beamGaugeBg.setVisible(false);
                             this.beamGaugeFill.setVisible(false);
@@ -793,6 +796,184 @@
                 }
 
                 // 仲間：P→C1→C2 と鎖状に追従（各自が前走者を追う＝自然な時差）
+                // 仲間を連れて宇宙船に戻ったら、2人が先に乗り込み、プレイヤーは最後
+                if (!this.returningToShip && this.crewFollowing && this.crews.length > 0
+                    && this.spaceship && Math.abs(this.astronaut.x - this.spaceship.x) < 20) {
+                    this.returningToShip = true;
+                    this.crewFollowing = false;
+                    const ladderX = this.spaceship.x - 5;
+                    const ladderTop = this.spaceship.y + 20;
+                    const ladderBottom = this.spaceship.y + 45;
+                    const crews = this.crews.slice();
+                    // 仲間を順にハシゴ下まで移動→登って船内へ
+                    crews.forEach((c, idx) => {
+                        this.time.delayedCall(idx * 900, () => {
+                            const face = ladderX < c.x ? 'L' : 'R';
+                            c.setTexture('crew_' + face);
+                            this.tweens.add({
+                                targets: c,
+                                x: ladderX,
+                                y: ladderBottom + this.astronaut.displayHeight / 2,
+                                duration: 400,
+                                ease: 'Sine.easeInOut',
+                                onComplete: () => {
+                                    c.setTexture('crew');
+                                    this.tweens.add({
+                                        targets: c,
+                                        y: ladderTop - 5,
+                                        duration: 1000,
+                                        ease: 'Sine.easeInOut',
+                                        onComplete: () => c.setVisible(false)
+                                    });
+                                }
+                            });
+                        });
+                    });
+                    // 2人が乗り込んだ後、プレイヤーがハシゴを登る
+                    const playerStart = crews.length * 900 + 1400;
+                    this.time.delayedCall(playerStart, () => {
+                        this.playerClimbing = true;
+                        this.beamGaugeBg.setVisible(false);
+                        this.beamGaugeFill.setVisible(false);
+                        const face = ladderX < this.astronaut.x ? 'L' : 'R';
+                        this.astronaut.setTexture('spaceman_' + face);
+                        this.tweens.add({
+                            targets: this.astronaut,
+                            x: ladderX,
+                            duration: 400,
+                            ease: 'Sine.easeInOut',
+                            onComplete: () => {
+                                this.astronaut.setTexture('spaceman');
+                                this.tweens.add({
+                                    targets: this.astronaut,
+                                    y: ladderTop - 5,
+                                    duration: 1000,
+                                    ease: 'Sine.easeInOut',
+                                    onComplete: () => {
+                                        this.astronaut.setVisible(false);
+                                        // 登り終えたら徐々にズームアウト（ポッド上昇中も続く）
+                                        this.tweens.add({
+                                            targets: this.cameras.main,
+                                            zoom: 1.8,
+                                            duration: 5000,
+                                            ease: 'Sine.easeInOut'
+                                        });
+                                        // 2秒後：宇宙船上部からポッド打ち上げ
+                                        this.time.delayedCall(2000, () => {
+                                            const podX = this.spaceship.x;
+                                            const podY = this.spaceship.y - 20;
+                                            const pod = this.add.image(podX, podY, 'pod');
+                                            pod.setDisplaySize(24, 24);
+                                            pod.setDepth(11);
+
+                                            // エイリアンたちは地中へ散り散りに退却
+                                            this.enemiesRetreating = true;
+                                            this.enemies.forEach(e => {
+                                                e.setMask(this.groundMask);
+                                                const rx = e.x + Phaser.Math.Between(-140, 140);
+                                                this.tweens.add({
+                                                    targets: e,
+                                                    x: rx,
+                                                    duration: Phaser.Math.Between(1400, 2200),
+                                                    ease: 'Sine.easeInOut'
+                                                });
+                                                this.tweens.add({
+                                                    targets: e,
+                                                    y: e.y + e.displayHeight + 20,
+                                                    delay: Phaser.Math.Between(200, 1000),
+                                                    duration: Phaser.Math.Between(900, 1400),
+                                                    ease: 'Sine.easeIn',
+                                                    onComplete: () => e.destroy()
+                                                });
+                                            });
+                                            this.enemies = [];
+
+                                            // 発射マズル噴射：左右に白煙＋炎（大きく派手に）
+                                            for (let side = -1; side <= 1; side += 2) {
+                                                // フラッシュ（瞬間の閃光）
+                                                const flash = this.add.circle(podX + side * 10, podY + 2, 22, 0xffffff, 1);
+                                                flash.setDepth(11);
+                                                this.tweens.add({
+                                                    targets: flash,
+                                                    scale: 2.5,
+                                                    alpha: 0,
+                                                    duration: 180,
+                                                    ease: 'Cubic.easeOut',
+                                                    onComplete: () => flash.destroy()
+                                                });
+                                                for (let i = 0; i < 28; i++) {
+                                                    const isSmoke = i % 2 === 0;
+                                                    const color = isSmoke
+                                                        ? (Phaser.Math.Between(0, 1) ? 0xffffff : 0xdddddd)
+                                                        : (Phaser.Math.Between(0, 2) === 0 ? 0xff4422 : (Phaser.Math.Between(0, 1) ? 0xff9933 : 0xffee55));
+                                                    const r = isSmoke ? Phaser.Math.FloatBetween(4, 8) : Phaser.Math.FloatBetween(3, 6);
+                                                    const p = this.add.circle(podX + side * 10, podY + 2, r, color, 0.95);
+                                                    p.setDepth(10);
+                                                    this.tweens.add({
+                                                        targets: p,
+                                                        x: p.x + side * Phaser.Math.Between(60, 140),
+                                                        y: p.y + Phaser.Math.Between(-24, 24),
+                                                        alpha: 0,
+                                                        scale: isSmoke ? 4.5 : 0.4,
+                                                        duration: Phaser.Math.Between(500, 1000),
+                                                        ease: 'Cubic.easeOut',
+                                                        onComplete: () => p.destroy()
+                                                    });
+                                                }
+                                            }
+
+                                            // 下部の噴射ノズル炎（ポッドに追従し、上昇中は常時噴射）
+                                            const nozzle = this.add.graphics();
+                                            nozzle.setDepth(10);
+                                            const drawNozzle = () => {
+                                                nozzle.clear();
+                                                const nx = pod.x;
+                                                const ny = pod.y + 12;
+                                                const flick = Phaser.Math.FloatBetween(0.8, 1.2);
+                                                // 外炎（オレンジ）
+                                                nozzle.fillStyle(0xff8822, 0.9);
+                                                nozzle.fillTriangle(nx - 5, ny, nx + 5, ny, nx, ny + 14 * flick);
+                                                // 内炎（黄）
+                                                nozzle.fillStyle(0xffee66, 0.95);
+                                                nozzle.fillTriangle(nx - 3, ny, nx + 3, ny, nx, ny + 9 * flick);
+                                                // 芯（白）
+                                                nozzle.fillStyle(0xffffff, 1);
+                                                nozzle.fillTriangle(nx - 1.5, ny, nx + 1.5, ny, nx, ny + 5 * flick);
+                                            };
+                                            const nozzleTimer = this.time.addEvent({
+                                                delay: 30,
+                                                loop: true,
+                                                callback: drawNozzle
+                                            });
+
+                                            // カメラも上昇（ポッドより遅いので3秒でポッドが画面上へ消える）
+                                            this.cameraRising = true;
+                                            this.tweens.add({
+                                                targets: this.cameras.main,
+                                                scrollY: this.cameras.main.scrollY - 700,
+                                                duration: 3000,
+                                                ease: 'Cubic.easeIn'
+                                            });
+
+                                            this.tweens.add({
+                                                targets: pod,
+                                                y: pod.y - 900,
+                                                duration: 3000,
+                                                ease: 'Cubic.easeIn',
+                                                onComplete: () => {
+                                                    pod.destroy();
+                                                    nozzleTimer.remove();
+                                                    nozzle.destroy();
+                                                }
+                                            });
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
+
                 if (this.crewFollowing && this.crews.length) {
                     const yOffset = this.astronaut.displayHeight / 2;
                     const backDir = this.astronautFacing === 'left' ? 1 : (this.astronautFacing === 'right' ? -1 : -1);
@@ -812,14 +993,16 @@
                     });
                 }
 
-                // カメラを宇宙飛行士に追従
+                // カメラを宇宙飛行士に追従（ポッド打ち上げ中はスキップ）
                 const cam = this.cameras.main;
-                const currentX = cam.scrollX + cam.width / 2;
-                const currentY = cam.scrollY + cam.height / 2;
-                cam.centerOn(
-                    Phaser.Math.Linear(currentX, this.astronaut.x, 0.04),
-                    Phaser.Math.Linear(currentY, this.astronaut.y, 0.04)
-                );
+                if (!this.cameraRising) {
+                    const currentX = cam.scrollX + cam.width / 2;
+                    const currentY = cam.scrollY + cam.height / 2;
+                    cam.centerOn(
+                        Phaser.Math.Linear(currentX, this.astronaut.x, 0.04),
+                        Phaser.Math.Linear(currentY, this.astronaut.y, 0.04)
+                    );
+                }
 
                 // デブリは飛び続ける
                 const camLeft = cam.worldView.left;
@@ -1198,7 +1381,7 @@
 
                                     // 地底人スポーン（地面から頭→体→足の順で這い出す）
                                     this.spawnEnemy = () => {
-                                        if (this.astronautGameOver || !this.astronautMode) return;
+                                        if (this.astronautGameOver || !this.astronautMode || this.enemiesRetreating) return;
                                         const side = Phaser.Math.Between(0, 1) ? -1 : 1;
                                         const distance = Phaser.Math.Between(160, 360);
                                         const spawnX = this.astronaut.x + side * distance;
@@ -1341,10 +1524,10 @@
                 debris.angle += debris.getData('rotationSpeed');
             });
 
-            // 宇宙船とデブリとの衝突をチェック
-            this.physics.overlap(this.spaceship, this.debrisGroup, () => {
-                gameOver(this, 'Craaaash!');
-            });
+            // 宇宙船とデブリとの衝突をチェック（一時OFF）
+            // this.physics.overlap(this.spaceship, this.debrisGroup, () => {
+            //     gameOver(this, 'Craaaash!');
+            // });
 
         }
 
