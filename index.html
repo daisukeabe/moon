@@ -946,13 +946,21 @@
                                                 callback: drawNozzle
                                             });
 
-                                            // カメラも上昇（ポッドより遅いので3秒でポッドが画面上へ消える）
+                                            // カメラも上昇（ポッドより遅い。消えた後もスーッと余韻で減速）
                                             this.cameraRising = true;
                                             this.tweens.add({
                                                 targets: this.cameras.main,
                                                 scrollY: this.cameras.main.scrollY - 700,
                                                 duration: 3000,
-                                                ease: 'Cubic.easeIn'
+                                                ease: 'Cubic.easeIn',
+                                                onComplete: () => {
+                                                    this.tweens.add({
+                                                        targets: this.cameras.main,
+                                                        scrollY: this.cameras.main.scrollY - 180,
+                                                        duration: 1600,
+                                                        ease: 'Cubic.easeOut'
+                                                    });
+                                                }
                                             });
 
                                             this.tweens.add({
