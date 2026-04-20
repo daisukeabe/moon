@@ -383,7 +383,10 @@
                 const onGround = this.astronaut.y >= this.astronautGroundY;
 
                 // 爆発後は一切の操作・更新を停止（演出のみ残す）
-                if (this.astronautGameOver) return;
+                if (this.astronautGameOver) {
+                    if (this.beamTameSound && this.beamTameSound.isPlaying) this.beamTameSound.stop();
+                    return;
+                }
 
                 // 左右移動（停止しても向きは維持）
                 const isMoving = this.cursors.left.isDown || this.cursors.right.isDown;
@@ -395,6 +398,9 @@
                     this.astronaut.x += moveSpeed * dt;
                     this.astronaut.setTexture('spaceman_R');
                     this.astronautFacing = 'right';
+                }
+                if (this.astronautMinX !== undefined) {
+                    this.astronaut.x = Phaser.Math.Clamp(this.astronaut.x, this.astronautMinX, this.astronautMaxX);
                 }
 
                 // 足音（移動中かつ接地時、ランダムで間隔再生）
@@ -521,7 +527,8 @@
                         if (this.enemies && this.enemies.length) {
                             const beamBounds = l.beam.getBounds();
                             this.enemies = this.enemies.filter(e => {
-                                const canHit = !e.emerging && Phaser.Geom.Intersects.RectangleToRectangle(beamBounds, e.getBounds());
+                                const emergedEnough = !e.emerging || e.y <= this.groundFeetY + e.displayHeight * 2 / 3;
+                                const canHit = emergedEnough && Phaser.Geom.Intersects.RectangleToRectangle(beamBounds, e.getBounds());
                                 if (!canHit) return true;
                                 // チャージビーム：各敵に1回だけダメージ（フレーム跨ぎで重複ヒット防止）
                                 if (l.charged) {
@@ -591,17 +598,21 @@
                     };
                     const astroBox = shrink(this.astronaut, 3, 2);
                     for (const e of this.enemies) {
-                        if (e.emerging) continue;
-                        // 主人公が空中の間は方向転換しない（飛び越え後すぐ捕まるのを防止）
-                        if (onGround) {
-                            const dx = this.astronaut.x - e.x;
-                            e.lastDir = dx === 0 ? (e.lastDir || 1) : Math.sign(dx);
+                        // 半分以上出るまでは当たり判定なし
+                        if (e.emerging && e.y > this.groundFeetY + e.displayHeight / 2) continue;
+                        // 出現中は移動・方向転換しない（当たり判定は維持）
+                        if (!e.emerging) {
+                            // 主人公が空中の間は方向転換しない（飛び越え後すぐ捕まるのを防止）
+                            if (onGround) {
+                                const dx = this.astronaut.x - e.x;
+                                e.lastDir = dx === 0 ? (e.lastDir || 1) : Math.sign(dx);
+                            }
+                            const sign = e.lastDir || 1;
+                            const sp = e.isBoss ? 28 : enemySpeed;
+                            e.x += sign * sp * dt;
+                            const prefix = e.isBoss ? 'boss_' : 'alien_';
+                            e.setTexture(prefix + (sign < 0 ? 'L' : 'R'));
                         }
-                        const sign = e.lastDir || 1;
-                        const sp = e.isBoss ? 28 : enemySpeed;
-                        e.x += sign * sp * dt;
-                        const prefix = e.isBoss ? 'boss_' : 'alien_';
-                        e.setTexture(prefix + (sign < 0 ? 'L' : 'R'));
                         const enemyBox = e.isBoss ? shrink(e, 6, 5) : shrink(e, 2, 3);
                         // 仲間が捕まった場合もゲームオーバー（救出失敗）
                         const hitCrew = this.crewFollowing ? this.crews.find(c => c.visible && Phaser.Geom.Intersects.RectangleToRectangle(shrink(c, 3, 2), enemyBox)) : null;
@@ -680,8 +691,8 @@
                             const captureX = this.astronaut.x;
                             const captureY = this.astronaut.y;
 
-                            // プレイヤーは表示したまま、マスク適用
-                            this.astronaut.setDepth(9);
+                            // プレイヤーはエイリアンと一緒に地中へ沈む（エイリアンより手前・泡より奥）
+                            this.astronaut.setDepth(10.5);
                             this.astronaut.setMask(this.groundMask);
                             e.setDepth(10);
                             e.setMask(this.groundMask);
@@ -721,9 +732,8 @@
                                 ease: 'Sine.easeOut'
                             });
 
-                            // 泡が覆い尽くしたら、全員まとめて地中へ
+                            // 泡が覆い尽くしたら地中へ：同じタイミングだがエイリアンが先に沈む
                             this.time.delayedCall(totalBubbles * 33 + 300, () => {
-                                this.astronaut.setVisible(false);
                                 const sinkY = this.groundFeetY + 50;
                                 this.tweens.add({
                                     targets: [...bubbles, e],
@@ -737,22 +747,47 @@
                                         this.time.delayedCall(2500, () => { this.scene.restart(); });
                                     }
                                 });
+                                this.tweens.add({
+                                    targets: this.astronaut,
+                                    y: sinkY,
+                                    duration: 1000,
+                                    delay: 120,
+                                    ease: 'Sine.easeIn'
+                                });
                             });
                         }
                     }
                 }
 
-                // 仲間：車に近づくと2人出現 → プレイヤーに遅延追従
+                // 仲間：車に近づくと2人が車のドア（高さ30px）からぴょんと降りてくる
                 if (this.moonCar && !this.crewFound && Math.abs(this.astronaut.x - this.moonCar.x) < 80) {
                     this.crewFound = true;
+                    const exitDir = this.astronaut.x < this.moonCar.x ? -1 : 1;
+                    const exitTex = exitDir > 0 ? 'crew_R' : 'crew_L';
+                    const doorY = this.groundFeetY - 30;
                     for (let i = 0; i < 2; i++) {
-                        const c = this.add.image(this.moonCar.x + i * 12, this.groundFeetY, 'crew');
+                        const c = this.add.image(this.moonCar.x, doorY, exitTex);
                         c.setDisplaySize(15, 15);
                         c.setOrigin(0.5, 1);
-                        c.setDepth(7); // プレイヤー(8)の奥だが車(6)の手前
+                        c.setDepth(7);
                         this.crews.push(c);
+                        this.time.delayedCall(i * 400, () => {
+                            // ぴょんと降りる：横に出つつY方向はバウンドで着地
+                            this.tweens.add({
+                                targets: c,
+                                x: this.moonCar.x + exitDir * (30 + i * 12),
+                                duration: 600,
+                                ease: 'Sine.easeOut'
+                            });
+                            this.tweens.add({
+                                targets: c,
+                                y: this.groundFeetY,
+                                duration: 600,
+                                ease: 'Bounce.easeOut'
+                            });
+                        });
                     }
-                    this.time.delayedCall(500, () => {
+                    this.time.delayedCall(400 + 600 + 200, () => {
                         this.crewFollowing = true;
                     });
                 }
@@ -1090,6 +1125,43 @@
                                     // そのまま操作可能にする（物理不要、手動制御）
                                     this.astronaut = astronaut;
                                     this.astronautGroundY = astronaut.y; // 地面のY座標を記憶
+                                    // 移動範囲を背景画像内にクランプ（ズーム2.5での可視域を背景内に収める）
+                                    const bgTex = this.textures.get('background').getSourceImage();
+                                    const bgCenterX = this.scale.width / 2;
+                                    const camHalfW = this.scale.width / 2.5 / 2;
+                                    this.astronautMinX = (bgCenterX - bgTex.width / 2) + camHalfW;
+                                    this.astronautMaxX = (bgCenterX + bgTex.width / 2) - camHalfW;
+                                    // 仮：移動限界の外側に2001モノリス（立体感あり）
+                                    const monoY = this.astronautGroundY + this.astronaut.displayHeight / 2;
+                                    const monoW = 20;
+                                    const monoH = 140;
+                                    const depthX = 6;
+                                    const depthY = -4;
+                                    const gap = monoW / 2 + this.astronaut.displayWidth / 2;
+                                    [
+                                        { x: this.astronautMinX - gap, innerDir: 1 },
+                                        { x: this.astronautMaxX + gap, innerDir: -1 }
+                                    ].forEach(p => {
+                                        const g = this.add.graphics();
+                                        g.setDepth(7);
+                                        const topY = monoY - monoH;
+                                        const innerX = p.x + p.innerDir * monoW / 2;
+                                        // 側面（プレイヤー側に見える面・わずかに明るく）
+                                        g.fillStyle(0x2a2a2a);
+                                        g.beginPath();
+                                        g.moveTo(innerX, topY);
+                                        g.lineTo(innerX + p.innerDir * depthX, topY + depthY);
+                                        g.lineTo(innerX + p.innerDir * depthX, monoY + depthY);
+                                        g.lineTo(innerX, monoY);
+                                        g.closePath();
+                                        g.fillPath();
+                                        // 前面
+                                        g.fillStyle(0x000000);
+                                        g.fillRect(p.x - monoW / 2, topY, monoW, monoH);
+                                        // アウトライン
+                                        g.lineStyle(1, 0x111111);
+                                        g.strokeRect(p.x - monoW / 2, topY, monoW, monoH);
+                                    });
                                     this.astronautVY = 0; // 縦方向の速度
                                     this.astronautFacing = null; // 向き（左右移動後に確定、未確定時は発射不可）
                                     this.lasers = []; // 発射中のレーザー
